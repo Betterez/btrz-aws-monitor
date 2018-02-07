@@ -1,4 +1,4 @@
-Aws utils
+Btrz Aws monitor
 =============
 Check health status of aws servers based on the tagging system.
 
