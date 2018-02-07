@@ -1,17 +1,17 @@
 Aws utils
 =============
-This is a go branching of the old ruby repository.
 Check health status of aws servers based on the tagging system.
 
 Requirements
 --------------
 * Current version was compiled under go 1.75 and go 1.8
-* for easy building you'll need `make` installed.
+* you'll need `make` installed to build it
 
 Setting up
 -----------------
 You should have your GOPATH setup.
-just run `make setup` to download any prerequisites. it will be installed into the current GOPATH and not the current directory.
+just run `make setup` to download any requirements. 
+it will be installed into the current GOPATH and not the current directory.
 
 
 Building
