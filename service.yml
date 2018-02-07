@@ -1,0 +1,19 @@
+deployment:
+  healthcheck:
+    command: curl -m 5 -i localhost:3000/healthcheck|head -n1
+    perform: true
+    result: 200 OK
+  nginx_conf: btrz-aws-monitor
+  elb_version: 0
+  path_name: btrz-aws-monitor
+  service_name: btrz-aws-monitor
+  service_type: http
+  source:
+    type: s3
+    bucket: "btrz-aws-monitor"
+    file_name: aws-utils
+machine:
+  daemon_type: systemd
+  image: packer-pure16
+  install:
+  start:  "/home/bz-app/btrz-aws-monitor/btrz-aws-monitor"

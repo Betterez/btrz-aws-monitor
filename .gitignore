@@ -1,0 +1,5 @@
+bin/
+pkg/
+secrets/
+*.tgz
+*.tar.gz
