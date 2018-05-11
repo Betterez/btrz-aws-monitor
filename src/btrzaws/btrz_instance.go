@@ -73,6 +73,9 @@ func (instance *BetterezInstance) GetHealthCheckString() string {
 	} else {
 		testIPAddress = instance.PrivateIPAddress
 	}
+	if instance.PathName == "webhooks" {
+		port = 4000
+	}
 	if instance.Repository == "connex2" {
 		port = 22000
 		testURL = fmt.Sprintf("http://%s:%d/healthcheck", testIPAddress, port)
