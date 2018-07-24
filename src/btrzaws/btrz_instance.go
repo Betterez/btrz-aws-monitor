@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
@@ -150,4 +151,47 @@ func (instance *BetterezInstance) RestartService() error {
 	}
 	err = sshConnection.Run(fmt.Sprintf("sudo service %s restart", serviceName))
 	return err
+}
+
+// HardRestartService - stop and start the aws vm in case it doesn't responde
+func (instance *BetterezInstance) HardRestartService() error {
+	session, err := GetAWSSession()
+	if err != nil {
+		return err
+	}
+	ec2Service := ec2.New(session)
+	_, err = ec2Service.StopInstances(&ec2.StopInstancesInput{
+		DryRun: aws.Bool(false),
+		InstanceIds: []*string{
+			aws.String(instance.InstanceID),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	processStatus := 0
+	for {
+		time.Sleep(10)
+		output, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
+			DryRun: aws.Bool(false),
+			InstanceIds: []*string{
+				aws.String(instance.InstanceID),
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if *output.Reservations[0].Instances[0].State.Name == "stopped" && processStatus == 0 {
+			processStatus = 1
+			ec2Service.StartInstances(&ec2.StartInstancesInput{
+				DryRun: aws.Bool(false),
+				InstanceIds: []*string{
+					aws.String(instance.InstanceID),
+				},
+			})
+		} else if processStatus == 1 && *output.Reservations[0].Instances[0].State.Name == "running" {
+			break
+		}
+	}
+	return nil
 }
