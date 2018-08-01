@@ -2,10 +2,12 @@ package sshconnector
 
 import (
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"net"
 	"os"
+	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -51,6 +53,7 @@ func CreateSSHSession(serverAddress, username, authenticationParam string, serve
 		auth = []ssh.AuthMethod{ssh.Password(authenticationParam)}
 	}
 	sshConfig.Auth = auth
+	sshConfig.Timeout = time.Second * 5
 	connectionString := fmt.Sprintf("%s:%d", serverAddress, serverPort)
 	connection, err := ssh.Dial("tcp", connectionString, sshConfig)
 	if err != nil {

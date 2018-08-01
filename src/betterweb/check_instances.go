@@ -55,6 +55,11 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 					if faultyInstances[instance.InstanceID] > FaultThreshold {
 						dealWithFaultyServer(instance, sess)
 					}
+					if faultyInstances[instance.InstanceID] > ReserThreshold {
+						if instance.RestartService() != nil {
+							instance.HardRestartService()
+						}
+					}
 				} else {
 					if ok {
 						// fmt.Println(" checked!")
@@ -64,6 +69,11 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 						faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
 						if faultyInstances[instance.InstanceID] > FaultThreshold {
 							dealWithFaultyServer(instance, sess)
+						}
+						if faultyInstances[instance.InstanceID] > ReserThreshold {
+							if instance.RestartService() != nil {
+								instance.HardRestartService()
+							}
 						}
 					}
 					instance.FaultsCount = faultyInstances[instance.InstanceID]
