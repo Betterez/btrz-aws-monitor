@@ -14,7 +14,7 @@ import (
 const (
 	// FaultThreshold - how many failed attempts before notification
 	FaultThreshold = 3
-	// ReserThreshold - how many failed attempts befor ssh reset\
+	// ReserThreshold - how many failed attempts befor ssh reset
 	ReserThreshold = 5
 	// TestDuration - time to wait between testing
 	TestDuration = 28 * time.Second
