@@ -170,28 +170,30 @@ func (instance *BetterezInstance) HardRestartService() error {
 		return err
 	}
 	processStatus := 0
-	for {
-		time.Sleep(10)
-		output, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
-			DryRun: aws.Bool(false),
-			InstanceIds: []*string{
-				aws.String(instance.InstanceID),
-			},
-		})
-		if err != nil {
-			return err
-		}
-		if *output.Reservations[0].Instances[0].State.Name == "stopped" && processStatus == 0 {
-			processStatus = 1
-			ec2Service.StartInstances(&ec2.StartInstancesInput{
+	go func() {
+		for {
+			time.Sleep(10)
+			output, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
 				DryRun: aws.Bool(false),
 				InstanceIds: []*string{
 					aws.String(instance.InstanceID),
 				},
 			})
-		} else if processStatus == 1 && *output.Reservations[0].Instances[0].State.Name == "running" {
-			break
+			if err != nil {
+				break
+			}
+			if *output.Reservations[0].Instances[0].State.Name == "stopped" && processStatus == 0 {
+				processStatus = 1
+				ec2Service.StartInstances(&ec2.StartInstancesInput{
+					DryRun: aws.Bool(false),
+					InstanceIds: []*string{
+						aws.String(instance.InstanceID),
+					},
+				})
+			} else if processStatus == 1 && *output.Reservations[0].Instances[0].State.Name == "running" {
+				break
+			}
 		}
-	}
+	}()
 	return nil
 }
