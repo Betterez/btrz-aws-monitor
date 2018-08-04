@@ -3,8 +3,9 @@ package main
 import (
 	"betterweb"
 	"btrzaws"
-	"log"
+	"fmt"
 	"github.com/bsphere/le_go"
+	"log"
 	"os"
 )
 
@@ -16,11 +17,12 @@ func main() {
 		log.Fatal(err)
 	}
 	leToken := os.Getenv("LE_TOKEN")
-	if leToken!=""{
+	if leToken != "" {
 		le, _ := le_go.Connect(leToken)
 		le.Print("monitor starting")
 	}
 	server := betterweb.CreateHealthCheckServer()
 	server.SetSession(sess)
+	fmt.Printf("monitor started.\r\n")
 	server.Start()
 }

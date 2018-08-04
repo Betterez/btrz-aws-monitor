@@ -2,7 +2,7 @@ package betterweb
 
 import (
 	"btrzaws"
-	// "fmt"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -17,11 +17,17 @@ const (
 	// ReserThreshold - how many failed attempts befor ssh reset
 	ReserThreshold = 5
 	// TestDuration - time to wait between testing
-	TestDuration = 28 * time.Second
+	TestDuration = 8 * time.Second
 )
+
+type restartCounter struct {
+	restartPoint  time.Time
+	countingPoint int
+}
 
 func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 	faultyInstances := make(map[string]int)
+	restartingInstances := make(map[string]restartCounter)
 	for {
 		instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
 		tags := []*btrzaws.AwsTag{
@@ -46,16 +52,22 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 			instancesIndex := 0
 			for _, instance := range clientResponse.Instances {
 				instancesIndex++
-				//fmt.Println("")
-				//fmt.Println("checking ", instance.PrivateIPAddress, "...")
+				if restartingInstances[instance.InstanceID].countingPoint != 0 {
+					continue
+				}
 				ok, err := instance.CheckIsnstanceHealth()
 				if err != nil {
-					//fmt.Println(err, " error!")
+					fmt.Println(err, " error!")
 					faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
 					if faultyInstances[instance.InstanceID] > FaultThreshold {
-						dealWithFaultyServer(instance, sess)
+						// dealWithFaultyServer(instance, sess)
 					}
 					if faultyInstances[instance.InstanceID] > ReserThreshold {
+						fmt.Printf("server %s is out, restarting\r\n", instance.InstanceID)
+						restartingInstances[instance.InstanceID] = restartCounter{
+							countingPoint: 1,
+							restartPoint:  time.Now(),
+						}
 						if instance.RestartService() != nil {
 							instance.HardRestartService()
 						}
@@ -65,12 +77,17 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 						// fmt.Println(" checked!")
 						faultyInstances[instance.InstanceID] = 0
 					} else {
-						// fmt.Println(instance.PrivateIPAddress, "failed!")
+						fmt.Println(instance.PrivateIPAddress, "failed!")
 						faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
 						if faultyInstances[instance.InstanceID] > FaultThreshold {
-							dealWithFaultyServer(instance, sess)
+							// dealWithFaultyServer(instance, sess)
 						}
 						if faultyInstances[instance.InstanceID] > ReserThreshold {
+							fmt.Printf("server %s is out, restarting\r\n", instance.InstanceID)
+							restartingInstances[instance.InstanceID] = restartCounter{
+								countingPoint: 1,
+								restartPoint:  time.Now(),
+							}
 							if instance.RestartService() != nil {
 								instance.HardRestartService()
 							}
