@@ -11,7 +11,7 @@ import (
 
 const (
 	// ReportingThreshold - how many failed attempts before notification
-	ReportingThreshold = 5
+	ReportingThreshold = 3
 	// RestartThreshold - how many failed attempts befor reset
 	RestartThreshold = 3
 	// TestDuration - time to wait between testing
