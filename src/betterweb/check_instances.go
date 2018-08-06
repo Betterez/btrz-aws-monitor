@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	// FaultThreshold - how many failed attempts before notification
-	FaultThreshold = 3
-	// ReserThreshold - how many failed attempts befor ssh reset
-	ReserThreshold = 5
+	// ReportingThreshold - how many failed attempts before notification
+	ReportingThreshold = 5
+	// ReserThreshold - how many failed attempts befor reset
+	ReserThreshold = 3
 	// TestDuration - time to wait between testing
 	TestDuration = 8 * time.Second
 )
@@ -57,9 +57,9 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 				}
 				ok, err := instance.CheckIsnstanceHealth()
 				if err != nil {
-					fmt.Println(err, " error!")
+					recordLogLine(fmt.Sprintln(err, " error!"))
 					faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
-					if faultyInstances[instance.InstanceID] > FaultThreshold {
+					if faultyInstances[instance.InstanceID] > ReportingThreshold {
 						// dealWithFaultyServer(instance, sess)
 					}
 					if faultyInstances[instance.InstanceID] > ReserThreshold {
@@ -79,7 +79,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 					} else {
 						fmt.Println(instance.PrivateIPAddress, "failed!")
 						faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
-						if faultyInstances[instance.InstanceID] > FaultThreshold {
+						if faultyInstances[instance.InstanceID] > ReportingThreshold {
 							// dealWithFaultyServer(instance, sess)
 						}
 						if faultyInstances[instance.InstanceID] > ReserThreshold {
@@ -100,6 +100,13 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 			clientResponse.TimeStamp = time.Now()
 			time.Sleep(TestDuration)
 		}
+	}
+}
+func recordLogLine(line string) {
+	leToken := os.Getenv("LE_TOKEN")
+	if leToken != "" {
+		le, _ := le_go.Connect(leToken)
+		le.Printf(line)
 	}
 }
 
