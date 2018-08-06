@@ -141,11 +141,11 @@ func (instance *BetterezInstance) RestartService() error {
 		return errors.New("no keys path")
 	}
 	//os.path
-	keyFileLocation := fmt.Sprintf("%s/%s", GetKeysPath(), instance.KeyName)
+	keyFileLocation := fmt.Sprintf("%s%s.pem", GetKeysPath(), instance.KeyName)
 	if _, err := os.Stat(keyFileLocation); os.IsNotExist(err) {
-		return errors.New("key file doesn't exist")
+		return fmt.Errorf("%s key file doesn't exist", keyFileLocation)
 	}
-	sshConnection, err := sshconnector.CreateSSHSession(instance.PrivateIPAddress, "ubuntu", instance.KeyName, 22, sshconnector.UseKey)
+	sshConnection, err := sshconnector.CreateSSHSession(instance.PrivateIPAddress, "ubuntu", keyFileLocation, 22, sshconnector.UseKey)
 	if err != nil {
 		return err
 	}

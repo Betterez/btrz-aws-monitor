@@ -17,9 +17,9 @@ const (
 	// TestDuration - time to wait between testing
 	TestDuration = 8 * time.Second
 	// SoftRestartDuraion - Time to wait till a service restarted
-	SoftRestartDuraion = time.Second * 120
+	SoftRestartDuraion = time.Second * 30
 	// HardRestartDuration - Time to wait after a hard restart was scheduled
-	HardRestartDuration = time.Second * 300
+	HardRestartDuration = time.Second * 180
 )
 
 type restartCounter struct {
@@ -66,6 +66,9 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 					isThisInstanceFaulty = true
 				} else {
 					if ok {
+						if faultyInstances[instance.InstanceID] > 0 {
+							logging.RecordLogLine(fmt.Sprintf("Service %s on %s is back to normal.", instance.Repository, instance.InstanceID))
+						}
 						faultyInstances[instance.InstanceID] = 0
 						restartingInstances[instance.InstanceID] = restartCounter{
 							countingPoint:     0,
@@ -95,6 +98,9 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 								restartCheckpoint: time.Now().Add(HardRestartDuration),
 							}
 						} else {
+							logging.RecordLogLine(fmt.Sprintf("service %s (on %s) restarted.",
+								instance.Repository,
+								instance.InstanceID))
 							restartingInstances[instance.InstanceID] = restartCounter{
 								countingPoint:     1,
 								restartCheckpoint: time.Now().Add(SoftRestartDuraion),
