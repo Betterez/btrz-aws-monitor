@@ -20,6 +20,8 @@ const (
 	SoftRestartDuraion = time.Second * 30
 	// HardRestartDuration - Time to wait after a hard restart was scheduled
 	HardRestartDuration = time.Second * 180
+	// NotificationResetDuration - time to reset notification for service restarts
+	NotificationResetDuration = time.Hour * 1
 )
 
 type restartCounter struct {
@@ -29,7 +31,7 @@ type restartCounter struct {
 
 func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 	faultyInstances := make(map[string]int)
-	restartedServices := make(map[string]int)
+	restartedServicesCounterMap := make(map[string]restartCounter)
 	restartingInstances := make(map[string]restartCounter)
 	for {
 		instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
@@ -70,7 +72,12 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 						if faultyInstances[instance.InstanceID] > 0 {
 							logging.RecordLogLine(fmt.Sprintf("Service %s on %s is back to normal.", instance.Repository, instance.InstanceID))
 						}
-						restartedServices[instance.InstanceID] = 0
+						if restartedServicesCounterMap[instance.InstanceID].restartCheckpoint.Before(time.Now()) {
+							restartedServicesCounterMap[instance.InstanceID] = restartCounter{
+								countingPoint:     0,
+								restartCheckpoint: time.Now(),
+							}
+						}
 						faultyInstances[instance.InstanceID] = 0
 						restartingInstances[instance.InstanceID] = restartCounter{
 							countingPoint:     0,
@@ -89,9 +96,13 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 						faultyInstances[instance.InstanceID]))
 					// TODO: should this be =>?
 					if faultyInstances[instance.InstanceID] > RestartThreshold {
-						if restartedServices[instance.InstanceID] >= ReportingThreshold {
+						logging.RecordLogLine(fmt.Sprintf("%d restarts out of %d before notifying", restartedServicesCounterMap[instance.InstanceID], ReportingThreshold))
+						if restartedServicesCounterMap[instance.InstanceID].countingPoint >= ReportingThreshold {
 							notifyInstaneFailureStatus(instance, sess)
-							continue
+						}
+						restartedServicesCounterMap[instance.InstanceID] = restartCounter{
+							countingPoint:     restartedServicesCounterMap[instance.InstanceID].countingPoint + 1,
+							restartCheckpoint: time.Now().Add(time.Hour * 1),
 						}
 						logging.RecordLogLine(fmt.Sprintf("server %s (%s) is out, restarting", instance.InstanceID, instance.Repository))
 						err = instance.RestartService()
