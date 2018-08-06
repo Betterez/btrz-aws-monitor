@@ -3,15 +3,15 @@ package btrzaws
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"logging"
 	"net/http"
 	"os"
 	"sshconnector"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 // BetterezInstance - aws representation, for betterez
@@ -153,8 +153,8 @@ func (instance *BetterezInstance) RestartService() error {
 	return err
 }
 
-// HardRestartService - stop and start the aws vm in case it doesn't responde
-func (instance *BetterezInstance) HardRestartService() error {
+// RestartServer - stop and start the aws vm in case it doesn't responde
+func (instance *BetterezInstance) RestartServer() error {
 	session, err := GetAWSSession()
 	if err != nil {
 		return err
@@ -183,6 +183,7 @@ func (instance *BetterezInstance) HardRestartService() error {
 				break
 			}
 			if *output.Reservations[0].Instances[0].State.Name == "stopped" && processStatus == 0 {
+				logging.RecordLogLine(fmt.Sprintf("server %s stopped", instance.InstanceID))
 				processStatus = 1
 				ec2Service.StartInstances(&ec2.StartInstancesInput{
 					DryRun: aws.Bool(false),
@@ -191,6 +192,7 @@ func (instance *BetterezInstance) HardRestartService() error {
 					},
 				})
 			} else if processStatus == 1 && *output.Reservations[0].Instances[0].State.Name == "running" {
+				logging.RecordLogLine(fmt.Sprintf("server %s is running", instance.InstanceID))
 				break
 			}
 		}

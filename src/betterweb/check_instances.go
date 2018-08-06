@@ -3,26 +3,28 @@ package betterweb
 import (
 	"btrzaws"
 	"fmt"
-	"log"
-	"os"
-	"time"
-
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/bsphere/le_go"
+	"log"
+	"logging"
+	"time"
 )
 
 const (
 	// ReportingThreshold - how many failed attempts before notification
 	ReportingThreshold = 5
-	// ReserThreshold - how many failed attempts befor reset
-	ReserThreshold = 3
+	// RestartThreshold - how many failed attempts befor reset
+	RestartThreshold = 3
 	// TestDuration - time to wait between testing
 	TestDuration = 8 * time.Second
+	// SoftRestartDuraion - Time to wait till a service restarted
+	SoftRestartDuraion = time.Second * 120
+	// HardRestartDuration - Time to wait after a hard restart was scheduled
+	HardRestartDuration = time.Second * 300
 )
 
 type restartCounter struct {
-	restartPoint  time.Time
-	countingPoint int
+	restartCheckpoint time.Time
+	countingPoint     int
 }
 
 func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
@@ -53,64 +55,64 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 			for _, instance := range clientResponse.Instances {
 				instancesIndex++
 				if restartingInstances[instance.InstanceID].countingPoint != 0 {
-					continue
+					if time.Now().Before(restartingInstances[instance.InstanceID].restartCheckpoint) {
+						continue
+					}
 				}
+				isThisInstanceFaulty := false
 				ok, err := instance.CheckIsnstanceHealth()
 				if err != nil {
-					recordLogLine(fmt.Sprintln(err, " error!"))
-					faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
-					if faultyInstances[instance.InstanceID] > ReportingThreshold {
-						// notifyInstaneFailureStatus(instance, sess)
-					}
-					if faultyInstances[instance.InstanceID] > ReserThreshold {
-						fmt.Printf("server %s is out, restarting\r\n", instance.InstanceID)
-						restartingInstances[instance.InstanceID] = restartCounter{
-							countingPoint: 1,
-							restartPoint:  time.Now(),
-						}
-						if instance.RestartService() != nil {
-							instance.HardRestartService()
-						}
-					}
+					logging.RecordLogLine(fmt.Sprintf("error %v while checking instance! Fault counted.", err))
+					isThisInstanceFaulty = true
 				} else {
 					if ok {
-						// fmt.Println(" checked!")
 						faultyInstances[instance.InstanceID] = 0
-					} else {
-						fmt.Println(instance.PrivateIPAddress, "failed!")
-						faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
-						if faultyInstances[instance.InstanceID] > ReportingThreshold {
-							// notifyInstaneFailureStatus(instance, sess)
+						restartingInstances[instance.InstanceID] = restartCounter{
+							countingPoint:     0,
+							restartCheckpoint: time.Now(),
 						}
-						if faultyInstances[instance.InstanceID] > ReserThreshold {
-							fmt.Printf("server %s is out, restarting\r\n", instance.InstanceID)
+					} else {
+						isThisInstanceFaulty = true
+					}
+					// NOTE: what is this? I don't think it works.
+					//	instance.FaultsCount = faultyInstances[instance.InstanceID]
+				}
+				if isThisInstanceFaulty {
+					faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
+					logging.RecordLogLine(fmt.Sprintf("Instance %s (%s) failed healthcheck, %d failure count.",
+						instance.InstanceID, instance.Repository,
+						faultyInstances[instance.InstanceID]))
+					// TODO: should this be =>?
+					if faultyInstances[instance.InstanceID] > RestartThreshold {
+						logging.RecordLogLine(fmt.Sprintf("server %s (%s) is out, restarting", instance.InstanceID, instance.Repository))
+						err = instance.RestartService()
+						if err != nil {
+							logging.RecordLogLine(fmt.Sprintf("error %v while restarting the service on %s (%s). Performing full restart!",
+								err, instance.InstanceID, instance.Repository))
+							instance.RestartServer()
 							restartingInstances[instance.InstanceID] = restartCounter{
-								countingPoint: 1,
-								restartPoint:  time.Now(),
+								countingPoint:     1,
+								restartCheckpoint: time.Now().Add(HardRestartDuration),
 							}
-							if instance.RestartService() != nil {
-								instance.HardRestartService()
+						} else {
+							restartingInstances[instance.InstanceID] = restartCounter{
+								countingPoint:     1,
+								restartCheckpoint: time.Now().Add(SoftRestartDuraion),
 							}
 						}
 					}
-					instance.FaultsCount = faultyInstances[instance.InstanceID]
+					if faultyInstances[instance.InstanceID] > ReportingThreshold {
+						notifyInstaneFailureStatus(instance, sess)
+					}
 				}
 			}
-			//fmt.Println("Round completed.")
 			clientResponse.TimeStamp = time.Now()
 			time.Sleep(TestDuration)
 		}
 	}
 }
-func recordLogLine(line string) {
-	leToken := os.Getenv("LE_TOKEN")
-	if leToken != "" {
-		le, _ := le_go.Connect(leToken)
-		le.Printf(line)
-	}
-}
 
 func notifyInstaneFailureStatus(faultyInstance *btrzaws.BetterezInstance, sess *session.Session) {
-	recordLogLine(fmt.Sprintf("instance %s failure notice was sent. repo: %s", faultyInstance.InstanceID, faultyInstance.Repository))
+	logging.RecordLogLine(fmt.Sprintf("instance %s failure notice was sent. repo: %s", faultyInstance.InstanceID, faultyInstance.Repository))
 	btrzaws.Notify(faultyInstance, sess)
 }
