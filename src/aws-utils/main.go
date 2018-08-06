@@ -4,8 +4,7 @@ import (
 	"betterweb"
 	"btrzaws"
 	"fmt"
-	"github.com/bsphere/le_go"
-	"log"
+	"logging"
 	"os"
 )
 
@@ -14,15 +13,12 @@ var ()
 func main() {
 	sess, err := btrzaws.GetAWSSession()
 	if err != nil {
-		log.Fatal(err)
+		logging.RecordLogLine(fmt.Sprintf("%v while creating a session", err))
+		os.Exit(1)
 	}
-	leToken := os.Getenv("LE_TOKEN")
-	if leToken != "" {
-		le, _ := le_go.Connect(leToken)
-		le.Print("monitor starting")
-	}
+	logging.RecordLogLine("monitor starting")
 	server := betterweb.CreateHealthCheckServer()
 	server.SetSession(sess)
-	fmt.Printf("monitor started.\r\n")
+	logging.RecordLogLine("monitor started.\r\n")
 	server.Start()
 }
