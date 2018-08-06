@@ -73,6 +73,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 							logging.RecordLogLine(fmt.Sprintf("Service %s on %s is back to normal.", instance.Repository, instance.InstanceID))
 						}
 						if restartedServicesCounterMap[instance.InstanceID].restartCheckpoint.Before(time.Now()) {
+							logging.RecordLogLine(fmt.Sprintf("Clearing Service %s on %s notification counter.", instance.Repository, instance.InstanceID))
 							restartedServicesCounterMap[instance.InstanceID] = restartCounter{
 								countingPoint:     0,
 								restartCheckpoint: time.Now(),
