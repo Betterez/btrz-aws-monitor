@@ -60,7 +60,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 					recordLogLine(fmt.Sprintln(err, " error!"))
 					faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
 					if faultyInstances[instance.InstanceID] > ReportingThreshold {
-						// dealWithFaultyServer(instance, sess)
+						// notifyInstaneFailureStatus(instance, sess)
 					}
 					if faultyInstances[instance.InstanceID] > ReserThreshold {
 						fmt.Printf("server %s is out, restarting\r\n", instance.InstanceID)
@@ -80,7 +80,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 						fmt.Println(instance.PrivateIPAddress, "failed!")
 						faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
 						if faultyInstances[instance.InstanceID] > ReportingThreshold {
-							// dealWithFaultyServer(instance, sess)
+							// notifyInstaneFailureStatus(instance, sess)
 						}
 						if faultyInstances[instance.InstanceID] > ReserThreshold {
 							fmt.Printf("server %s is out, restarting\r\n", instance.InstanceID)
@@ -110,11 +110,7 @@ func recordLogLine(line string) {
 	}
 }
 
-func dealWithFaultyServer(faultyInstance *btrzaws.BetterezInstance, sess *session.Session) {
-	leToken := os.Getenv("LE_TOKEN")
-	if leToken != "" {
-		le, _ := le_go.Connect(leToken)
-		le.Printf("service %s is not responsive.", faultyInstance.InstanceID)
-	}
+func notifyInstaneFailureStatus(faultyInstance *btrzaws.BetterezInstance, sess *session.Session) {
+	recordLogLine(fmt.Sprintf("instance %s failure notice was sent. repo: %s", faultyInstance.InstanceID, faultyInstance.Repository))
 	btrzaws.Notify(faultyInstance, sess)
 }
