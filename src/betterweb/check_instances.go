@@ -29,6 +29,7 @@ type restartCounter struct {
 
 func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 	faultyInstances := make(map[string]int)
+	restartedServices := make(map[string]int)
 	restartingInstances := make(map[string]restartCounter)
 	for {
 		instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
@@ -69,6 +70,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 						if faultyInstances[instance.InstanceID] > 0 {
 							logging.RecordLogLine(fmt.Sprintf("Service %s on %s is back to normal.", instance.Repository, instance.InstanceID))
 						}
+						restartedServices[instance.InstanceID] = 0
 						faultyInstances[instance.InstanceID] = 0
 						restartingInstances[instance.InstanceID] = restartCounter{
 							countingPoint:     0,
@@ -87,6 +89,10 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 						faultyInstances[instance.InstanceID]))
 					// TODO: should this be =>?
 					if faultyInstances[instance.InstanceID] > RestartThreshold {
+						if restartedServices[instance.InstanceID] >= ReportingThreshold {
+							notifyInstaneFailureStatus(instance, sess)
+							continue
+						}
 						logging.RecordLogLine(fmt.Sprintf("server %s (%s) is out, restarting", instance.InstanceID, instance.Repository))
 						err = instance.RestartService()
 						if err != nil {
