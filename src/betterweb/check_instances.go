@@ -72,7 +72,8 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 						if faultyInstances[instance.InstanceID] > 0 {
 							logging.RecordLogLine(fmt.Sprintf("Service %s on %s is back to normal.", instance.Repository, instance.InstanceID))
 						}
-						if restartedServicesCounterMap[instance.InstanceID].restartCheckpoint.Before(time.Now()) {
+						if restartedServicesCounterMap[instance.InstanceID].countingPoint > 0 &&
+							restartedServicesCounterMap[instance.InstanceID].restartCheckpoint.Before(time.Now()) {
 							logging.RecordLogLine(fmt.Sprintf("Clearing Service %s on %s notification counter.", instance.Repository, instance.InstanceID))
 							restartedServicesCounterMap[instance.InstanceID] = restartCounter{
 								countingPoint:     0,
@@ -97,7 +98,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 						faultyInstances[instance.InstanceID]))
 					// TODO: should this be =>?
 					if faultyInstances[instance.InstanceID] > RestartThreshold {
-						logging.RecordLogLine(fmt.Sprintf("%d restarts out of %d before notifying", restartedServicesCounterMap[instance.InstanceID], ReportingThreshold))
+						logging.RecordLogLine(fmt.Sprintf("%d restarts out of %d before notifying", restartedServicesCounterMap[instance.InstanceID].countingPoint, ReportingThreshold))
 						if restartedServicesCounterMap[instance.InstanceID].countingPoint >= ReportingThreshold {
 							notifyInstaneFailureStatus(instance, sess)
 						}
