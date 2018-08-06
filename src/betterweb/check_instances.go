@@ -113,9 +113,6 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 							}
 						}
 					}
-					if faultyInstances[instance.InstanceID] > ReportingThreshold {
-						notifyInstaneFailureStatus(instance, sess)
-					}
 				}
 			}
 			clientResponse.TimeStamp = time.Now()
