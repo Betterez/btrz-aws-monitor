@@ -22,6 +22,8 @@ const (
 	HardRestartDuration = time.Second * 180
 	// NotificationResetDuration - time to reset notification for service restarts
 	NotificationResetDuration = time.Hour * 1
+	// ServerAliveDurationNotification - info notificaiton
+	ServerAliveDurationNotification = time.Minute * 10
 )
 
 type restartCounter struct {
@@ -33,12 +35,12 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 	faultyInstances := make(map[string]int)
 	restartedServicesCounterMap := make(map[string]restartCounter)
 	restartingInstances := make(map[string]restartCounter)
-	lastOKLogLine := time.Now().Add(time.Hour)
+	lastOKLogLine := time.Now().Add(ServerAliveDurationNotification)
 	logging.RecordLogLine(fmt.Sprintf("info: Server is up and running."))
 	for {
 		if lastOKLogLine.Before(time.Now()) {
 			logging.RecordLogLine(fmt.Sprintf("info: Server is up and running."))
-			lastOKLogLine = time.Now().Add(time.Hour)
+			lastOKLogLine = time.Now().Add(ServerAliveDurationNotification)
 		}
 		instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
 		tags := []*btrzaws.AwsTag{
