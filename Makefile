@@ -19,5 +19,5 @@ setup:
 	go get github.com/mxk/go-sqlite/sqlite3
 	go get golang.org/x/crypto/ssh
 	go get github.com/bsphere/le_go
-pam:
-	git commit -am 'update' && git checkout master && git merge dev && git checkout dev && git push origin --all
+merge:
+	git checkout master && git merge dev && git checkout dev && git push origin --all
