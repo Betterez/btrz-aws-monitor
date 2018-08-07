@@ -17,7 +17,7 @@ const (
 	// TestDuration - time to wait between testing
 	TestDuration = 8 * time.Second
 	// SoftRestartDuraion - Time to wait till a service restarted
-	SoftRestartDuraion = time.Second * 30
+	SoftRestartDuraion = time.Second * 45
 	// HardRestartDuration - Time to wait after a hard restart was scheduled
 	HardRestartDuration = time.Second * 180
 	// NotificationResetDuration - time to reset notification for service restarts
@@ -33,7 +33,13 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 	faultyInstances := make(map[string]int)
 	restartedServicesCounterMap := make(map[string]restartCounter)
 	restartingInstances := make(map[string]restartCounter)
+	lastOKLogLine := time.Now().Add(time.Hour)
+	logging.RecordLogLine(fmt.Sprintf("%v Server is up and running.", time.Now()))
 	for {
+		if lastOKLogLine.Before(time.Now()) {
+			logging.RecordLogLine(fmt.Sprintf("%v Server is up and running.", time.Now()))
+			lastOKLogLine = time.Now().Add(time.Hour)
+		}
 		instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
 		tags := []*btrzaws.AwsTag{
 			btrzaws.NewWithValues("tag:Environment", "production"),
