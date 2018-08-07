@@ -72,7 +72,7 @@ func (server *HealthCheckServer) Start() error {
 	if server.awsSession == nil {
 		return errors.New("No aws session")
 	}
-	clientResponse := &ClientResponse{Instances: []*btrzaws.BetterezInstance{}, Version: "1.0.0.1"}
+	clientResponse := &ClientResponse{Instances: []*btrzaws.BetterezInstance{}, Version: "1.0.0.3"}
 	go checkInstances(server.awsSession, clientResponse)
 	server.serverMux = http.NewServeMux()
 	server.serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
