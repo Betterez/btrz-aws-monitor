@@ -88,15 +88,12 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 					} else {
 						isThisInstanceFaulty = true
 					}
-					// NOTE: what is this? I don't think it works.
-					//	instance.FaultsCount = faultyInstances[instance.InstanceID]
 				}
 				if isThisInstanceFaulty {
 					faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
 					logging.RecordLogLine(fmt.Sprintf("Instance %s (%s) failed healthcheck, %d failure count.",
 						instance.InstanceID, instance.Repository,
 						faultyInstances[instance.InstanceID]))
-					// TODO: should this be =>?
 					if faultyInstances[instance.InstanceID] > RestartThreshold {
 						logging.RecordLogLine(fmt.Sprintf("%d restarts out of %d before notifying", restartedServicesCounterMap[instance.InstanceID].countingPoint, ReportingThreshold))
 						if restartedServicesCounterMap[instance.InstanceID].countingPoint >= ReportingThreshold {
