@@ -34,10 +34,10 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 	restartedServicesCounterMap := make(map[string]restartCounter)
 	restartingInstances := make(map[string]restartCounter)
 	lastOKLogLine := time.Now().Add(time.Hour)
-	logging.RecordLogLine(fmt.Sprintf("%v Server is up and running.", time.Now()))
+	logging.RecordLogLine(fmt.Sprintf("info: Server is up and running."))
 	for {
 		if lastOKLogLine.Before(time.Now()) {
-			logging.RecordLogLine(fmt.Sprintf("%v Server is up and running.", time.Now()))
+			logging.RecordLogLine(fmt.Sprintf("info: Server is up and running."))
 			lastOKLogLine = time.Now().Add(time.Hour)
 		}
 		instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
@@ -71,16 +71,16 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 				isThisInstanceFaulty := false
 				ok, err := instance.CheckIsnstanceHealth()
 				if err != nil {
-					logging.RecordLogLine(fmt.Sprintf("error %v while checking instance! Fault counted.", err))
+					logging.RecordLogLine(fmt.Sprintf("warning: error %v while checking instance! Fault counted.", err))
 					isThisInstanceFaulty = true
 				} else {
 					if ok {
 						if faultyInstances[instance.InstanceID] > 0 {
-							logging.RecordLogLine(fmt.Sprintf("Service %s on %s is back to normal.", instance.Repository, instance.InstanceID))
+							logging.RecordLogLine(fmt.Sprintf("info: Service %s on %s is back to normal.", instance.Repository, instance.InstanceID))
 						}
 						if restartedServicesCounterMap[instance.InstanceID].countingPoint > 0 &&
 							restartedServicesCounterMap[instance.InstanceID].restartCheckpoint.Before(time.Now()) {
-							logging.RecordLogLine(fmt.Sprintf("Clearing Service %s on %s notification counter.", instance.Repository, instance.InstanceID))
+							logging.RecordLogLine(fmt.Sprintf("info: Clearing Service %s on %s notification counter.", instance.Repository, instance.InstanceID))
 							restartedServicesCounterMap[instance.InstanceID] = restartCounter{
 								countingPoint:     0,
 								restartCheckpoint: time.Now(),
@@ -97,11 +97,11 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 				}
 				if isThisInstanceFaulty {
 					faultyInstances[instance.InstanceID] = faultyInstances[instance.InstanceID] + 1
-					logging.RecordLogLine(fmt.Sprintf("Instance %s (%s) failed healthcheck, %d failure count.",
+					logging.RecordLogLine(fmt.Sprintf("warning: Instance %s (%s) failed healthcheck, %d failure count.",
 						instance.InstanceID, instance.Repository,
 						faultyInstances[instance.InstanceID]))
 					if faultyInstances[instance.InstanceID] > RestartThreshold {
-						logging.RecordLogLine(fmt.Sprintf("%d restarts out of %d before notifying", restartedServicesCounterMap[instance.InstanceID].countingPoint, ReportingThreshold))
+						logging.RecordLogLine(fmt.Sprintf("info: %d restarts out of %d before notifying", restartedServicesCounterMap[instance.InstanceID].countingPoint, ReportingThreshold))
 						if restartedServicesCounterMap[instance.InstanceID].countingPoint >= ReportingThreshold {
 							notifyInstaneFailureStatus(instance, sess)
 						}
@@ -109,10 +109,10 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 							countingPoint:     restartedServicesCounterMap[instance.InstanceID].countingPoint + 1,
 							restartCheckpoint: time.Now().Add(time.Hour * 1),
 						}
-						logging.RecordLogLine(fmt.Sprintf("server %s (%s) is out, restarting", instance.InstanceID, instance.Repository))
+						logging.RecordLogLine(fmt.Sprintf("fatal: server %s (%s) is out, restarting", instance.InstanceID, instance.Repository))
 						err = instance.RestartService()
 						if err != nil {
-							logging.RecordLogLine(fmt.Sprintf("error %v while restarting the service on %s (%s). Performing full restart!",
+							logging.RecordLogLine(fmt.Sprintf("fatal: error %v while restarting the service on %s (%s). Performing full restart!",
 								err, instance.InstanceID, instance.Repository))
 							instance.RestartServer()
 							restartingInstances[instance.InstanceID] = restartCounter{
@@ -120,7 +120,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 								restartCheckpoint: time.Now().Add(HardRestartDuration),
 							}
 						} else {
-							logging.RecordLogLine(fmt.Sprintf("service %s (on %s) restarted.",
+							logging.RecordLogLine(fmt.Sprintf("info: service %s (on %s) restarted.",
 								instance.Repository,
 								instance.InstanceID))
 							restartingInstances[instance.InstanceID] = restartCounter{
