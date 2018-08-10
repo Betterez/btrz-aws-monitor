@@ -36,10 +36,8 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 	restartedServicesCounterMap := make(map[string]restartCounter)
 	restartingInstances := make(map[string]restartCounter)
 	lastOKLogLine := time.Now().Add(ServerAliveDurationNotification)
-	logging.RecordLogLine(fmt.Sprintf("info: Server is up and running."))
 	for {
 		if lastOKLogLine.Before(time.Now()) {
-			logging.RecordLogLine(fmt.Sprintf("info: Server is up and running."))
 			lastOKLogLine = time.Now().Add(ServerAliveDurationNotification)
 		}
 		instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
