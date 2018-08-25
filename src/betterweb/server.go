@@ -12,10 +12,20 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
+// InstanceMessage - instance availability message
+type InstanceMessage struct {
+	Instance        *btrzaws.BetterezInstance
+	Time            time.Time
+	UnhealthyChecks int
+	RestartAttempts int
+	HardRestarts    int
+}
+
 // ClientResponse - response to the client
 type ClientResponse struct {
 	TimeStamp time.Time
 	Instances []*btrzaws.BetterezInstance
+	Messages  []InstanceMessage
 	Version   string
 }
 
