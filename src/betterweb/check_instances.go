@@ -24,6 +24,8 @@ const (
 	NotificationResetDuration = time.Hour * 1
 	// ServerAliveDurationNotification - info notificaiton
 	ServerAliveDurationNotification = time.Minute * 10
+	// InitializationDuration - how long it take for a server to boot up
+	InitializationDuration = HardRestartDuration / 2
 )
 
 type restartCounter struct {
@@ -63,6 +65,9 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 		for _, instance := range clientResponse.Instances {
 			instancesIndex++
 			if isThisInsataceStillStarting(instance.InstanceID, &restartingInstances) {
+				continue
+			}
+			if isThisInstanceJustCreated(instance) {
 				continue
 			}
 			isThisInstanceFaulty := false
@@ -143,6 +148,13 @@ func isThisInsataceStillStarting(instanceID string, listing *map[string]restartC
 		if time.Now().Before((*listing)[instanceID].restartCheckpoint) {
 			return true
 		}
+	}
+	return false
+}
+
+func isThisInstanceJustCreated(instance *btrzaws.BetterezInstance) bool {
+	if (instance.AwsInstance.LaunchTime.Add(InitializationDuration)).Before(time.Now()) {
+		return true
 	}
 	return false
 }
