@@ -67,7 +67,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 			if isThisInsataceStillStarting(instance.InstanceID, &restartingInstances) {
 				continue
 			}
-			if isThisInstanceJustCreated(instance)ustCreated(instance) {
+			if isThisInstanceJustCreated(instance) {
 				continue
 			}
 			isThisInstanceFaulty := false
@@ -152,7 +152,7 @@ func isThisInsataceStillStarting(instanceID string, listing *map[string]restartC
 	return false
 }
 
-// mostly done for asg
+// mostly done for as
 func isThisInstanceJustCreated(instance *btrzaws.BetterezInstance) bool {
 	if (instance.AwsInstance.LaunchTime.Add(InitializationDuration)).Before(time.Now()) {
 		return true
