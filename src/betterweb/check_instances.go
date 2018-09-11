@@ -62,10 +62,8 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 		instancesIndex := 0
 		for _, instance := range clientResponse.Instances {
 			instancesIndex++
-			if restartingInstances[instance.InstanceID].countingPoint != 0 {
-				if time.Now().Before(restartingInstances[instance.InstanceID].restartCheckpoint) {
-					continue
-				}
+			if isThisInsataceStillStarting(instance.InstanceID, &restartingInstances) {
+				continue
 			}
 			isThisInstanceFaulty := false
 			ok, err := instance.CheckIsnstanceHealth()
@@ -138,4 +136,13 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 func notifyInstaneFailureStatus(faultyInstance *btrzaws.BetterezInstance, sess *session.Session) {
 	logging.RecordLogLine(fmt.Sprintf("instance %s failure notice was sent. repo: %s", faultyInstance.InstanceID, faultyInstance.Repository))
 	btrzaws.Notify(faultyInstance, sess)
+}
+
+func isThisInsataceStillStarting(instanceID string, listing *map[string]restartCounter) bool {
+	if (*listing)[instanceID].countingPoint != 0 {
+		if time.Now().Before((*listing)[instanceID].restartCheckpoint) {
+			return true
+		}
+	}
+	return false
 }
