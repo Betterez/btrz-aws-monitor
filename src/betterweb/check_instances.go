@@ -65,9 +65,11 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 		for _, instance := range clientResponse.Instances {
 			instancesIndex++
 			if isThisInsataceStillStarting(instance.InstanceID, &restartingInstances) {
+				logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = restarting  ", instance.InstanceID))
 				continue
 			}
 			if isThisInstanceJustCreated(instance) {
+				logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = new  ", instance.InstanceID))
 				continue
 			}
 			isThisInstanceFaulty := false
