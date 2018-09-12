@@ -154,7 +154,7 @@ func isThisInsataceStillStarting(instanceID string, listing *map[string]restartC
 
 // mostly done for as
 func isThisInstanceJustCreated(instance *btrzaws.BetterezInstance) bool {
-	if (instance.AwsInstance.LaunchTime.Add(InitializationDuration)).Before(time.Now()) {
+	if (instance.AwsInstance.LaunchTime.Add(InitializationDuration)).After(time.Now()) {
 		return true
 	}
 	return false
