@@ -3,8 +3,6 @@ package btrzaws
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"logging"
 	"net/http"
 	"os"
@@ -12,6 +10,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 // BetterezInstance - aws representation, for betterez
@@ -74,7 +75,7 @@ func (instance *BetterezInstance) GetHealthCheckString() string {
 	} else {
 		testIPAddress = instance.PrivateIPAddress
 	}
-	if instance.PathName == "webhooks" {
+	if instance.PathName == "webhooks" || instance.PathName == "loyalty" {
 		port = 4000
 	}
 	if instance.Repository == "connex2" {
