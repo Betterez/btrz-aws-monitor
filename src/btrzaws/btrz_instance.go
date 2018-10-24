@@ -31,6 +31,8 @@ type BetterezInstance struct {
 	FaultsCount            int
 	StatusCheck            time.Time
 	AwsInstance            *ec2.Instance
+	HealthcheckPath        string
+	HelthcheckPort         int
 }
 
 const (
@@ -41,13 +43,14 @@ const (
 // LoadFromAWSInstance - returns new BetterezInstance or an error
 func LoadFromAWSInstance(instance *ec2.Instance) *BetterezInstance {
 	result := &BetterezInstance{
-		Environment:  GetTagValue(instance, "Environment"),
-		Repository:   GetTagValue(instance, "Repository"),
-		PathName:     GetTagValue(instance, "Path-Name"),
-		InstanceName: GetTagValue(instance, "Name"),
-		InstanceID:   *instance.InstanceId,
-		KeyName:      *instance.KeyName,
-		AwsInstance:  instance,
+		Environment:     GetTagValue(instance, "Environment"),
+		Repository:      GetTagValue(instance, "Repository"),
+		PathName:        GetTagValue(instance, "Path-Name"),
+		InstanceName:    GetTagValue(instance, "Name"),
+		HealthcheckPath: GetTagValue(instance, "Healtcheck-Path"),
+		InstanceID:      *instance.InstanceId,
+		KeyName:         *instance.KeyName,
+		AwsInstance:     instance,
 	}
 	if instance.PublicIpAddress != nil {
 		result.PublicIPAddress = *instance.PublicIpAddress
@@ -62,12 +65,26 @@ func LoadFromAWSInstance(instance *ec2.Instance) *BetterezInstance {
 	} else {
 		result.BuildNumber = buildNumber
 	}
+
+	result.HelthcheckPort, err = strconv.Atoi(GetTagValue(instance, "Healtcheck-Port"))
+	if err != nil {
+		result.HelthcheckPort = 0
+	}
 	return result
 }
 
 // GetHealthCheckString - Creates the healthcheck string based on the service name and address
 func (instance *BetterezInstance) GetHealthCheckString() string {
-	port := 3000
+	port := instance.HelthcheckPort
+	if instance.HelthcheckPort == 0 {
+		port = 3000
+		if instance.PathName == "webhooks" || instance.PathName == "liveseatmaps" || instance.PathName == "loyalty" {
+			port = 4000
+		}
+		if instance.Repository == "connex2" {
+			port = 22000
+		}
+	}
 	var testURL string
 	var testIPAddress string
 	if instance.PublicIPAddress != "" {
@@ -75,17 +92,16 @@ func (instance *BetterezInstance) GetHealthCheckString() string {
 	} else {
 		testIPAddress = instance.PrivateIPAddress
 	}
-	if instance.PathName == "webhooks" || instance.PathName == "liveseatmaps" || instance.PathName == "loyalty" {
-		port = 4000
-	}
-	if instance.Repository == "connex2" {
-		port = 22000
-		testURL = fmt.Sprintf("http://%s:%d/healthcheck", testIPAddress, port)
-	} else if instance.PathName != "/" {
-		testURL = fmt.Sprintf("http://%s:%d/%s/healthcheck", testIPAddress, port, instance.PathName)
+	if instance.HealthcheckPath == "" {
+		if instance.PathName != "/" {
+			testURL = fmt.Sprintf("http://%s:%d/%s/healthcheck", testIPAddress, port, instance.PathName)
+		} else {
+			testURL = fmt.Sprintf("http://%s:%d/healthcheck", testIPAddress, port)
+		}
 	} else {
-		testURL = fmt.Sprintf("http://%s:%d/healthcheck", testIPAddress, port)
+		testURL = fmt.Sprintf("http://%s:%d/%s", testIPAddress, port, instance.HealthcheckPath)
 	}
+
 	return testURL
 }
 
