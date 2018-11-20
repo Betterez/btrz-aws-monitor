@@ -92,12 +92,25 @@ func (instance *BetterezInstance) GetHealthCheckString() string {
 	} else {
 		testIPAddress = instance.PrivateIPAddress
 	}
+<<<<<<< HEAD
 	if instance.HealthcheckPath == "" {
 		if instance.PathName != "/" {
 			testURL = fmt.Sprintf("http://%s:%d/%s/healthcheck", testIPAddress, port, instance.PathName)
 		} else {
 			testURL = fmt.Sprintf("http://%s:%d/healthcheck", testIPAddress, port)
 		}
+=======
+	if instance.PathName == "webhooks" || instance.PathName == "liveseatmaps" ||
+		instance.PathName == "loyalty" ||
+		instance.PathName == "seatmaps" {
+		port = 4000
+	}
+	if instance.Repository == "connex2" {
+		port = 22000
+		testURL = fmt.Sprintf("http://%s:%d/healthcheck", testIPAddress, port)
+	} else if instance.PathName != "/" {
+		testURL = fmt.Sprintf("http://%s:%d/%s/healthcheck", testIPAddress, port, instance.PathName)
+>>>>>>> 20fb56944d3b1752ef164d8079c7b7ac81f1a751
 	} else {
 		testURL = fmt.Sprintf("http://%s:%d/%s", testIPAddress, port, instance.HealthcheckPath)
 	}
