@@ -75,7 +75,9 @@ func (instance *BetterezInstance) GetHealthCheckString() string {
 	} else {
 		testIPAddress = instance.PrivateIPAddress
 	}
-	if instance.PathName == "webhooks" || instance.PathName == "liveseatmaps" || instance.PathName == "loyalty" {
+	if instance.PathName == "webhooks" || instance.PathName == "liveseatmaps" ||
+		instance.PathName == "loyalty" ||
+		instance.PathName == "seatmaps" {
 		port = 4000
 	}
 	if instance.Repository == "connex2" {
