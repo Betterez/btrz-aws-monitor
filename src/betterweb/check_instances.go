@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"log"
 	"logging"
+	"os"
 	"time"
 )
 
@@ -33,6 +34,13 @@ type restartCounter struct {
 	countingPoint     int
 }
 
+func getCurrentEnvironment() string {
+	if os.Getenv("env") != "" {
+		return os.Getenv("env")
+	}
+	return "production"
+}
+
 func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 	faultyInstances := make(map[string]int)
 	restartedServicesCounterMap := make(map[string]restartCounter)
@@ -44,7 +52,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 		}
 		instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
 		tags := []*btrzaws.AwsTag{
-			btrzaws.NewWithValues("tag:Environment", "production"),
+			btrzaws.NewWithValues("tag:Environment", getCurrentEnvironment()),
 			btrzaws.NewWithValues("tag:Service-Type", "http"),
 			btrzaws.NewWithValues("tag:Online", "yes"),
 			btrzaws.NewWithValues("instance-state-name", "running"),

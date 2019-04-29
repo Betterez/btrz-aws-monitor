@@ -41,7 +41,7 @@ type HealthCheckServer struct {
 }
 
 // CreateHealthCheckServer - create the server
-func CreateHealthCheckServer() *HealthCheckServer {
+func CreateHealthCheckServer() (*HealthCheckServer, error) {
 	result := &HealthCheckServer{
 		serverPort:    3000,
 		ServerVersion: "0.0.0.2",
@@ -50,10 +50,10 @@ func CreateHealthCheckServer() *HealthCheckServer {
 	}
 	authenticator, err := betterauth.GetSQLiteAuthenticator("secrets/users.db")
 	if err != nil {
-
+		return nil, err
 	}
 	result.authenticator = authenticator
-	return result
+	return result, nil
 }
 
 // GetServerStatus - get current status

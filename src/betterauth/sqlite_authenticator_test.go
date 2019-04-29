@@ -28,7 +28,6 @@ func TestAuthentication(t *testing.T) {
 	if row["password_hash"] != sum {
 		t.Fatalf("Bad value found for hash:%s", sum)
 	}
-
 }
 
 func TestAuthenticationWithParams(t *testing.T) {
@@ -51,7 +50,6 @@ func TestAuthenticationWithParams(t *testing.T) {
 	if row["password_hash"] != sum {
 		t.Fatalf("Bad value found for hash:%s", sum)
 	}
-
 }
 
 func TestParamsSanitation(t *testing.T) {

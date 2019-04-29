@@ -4,3 +4,4 @@ secrets/
 *.tgz
 *.tar.gz
 runners/
+config/
