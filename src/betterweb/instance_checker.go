@@ -4,7 +4,6 @@ import (
 	"btrzaws"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"log"
 	"logging"
 	"os"
 	"time"
@@ -16,10 +15,11 @@ type InstanceChecker struct {
 	restartingInstances         map[string]restartCounter
 	lastOKLogLine               time.Time
 	clientResponse              *ClientResponse
-	sess                        *session
+	sess                        *session.Session
 }
 
-func (ic *InstanceChecker) initChecker() {
+func (ic *InstanceChecker) initChecker(sess *session.Session) {
+	ic.sess = sess
 	ic.faultyInstances = make(map[string]int)
 	ic.restartedServicesCounterMap = make(map[string]restartCounter)
 	ic.restartingInstances = make(map[string]restartCounter)
@@ -154,8 +154,7 @@ func (ic *InstanceChecker) handleFaultyInstance(instance *btrzaws.BetterezInstan
 }
 
 func (ic *InstanceChecker) CheckInstances(sess *session.Session) {
-	ic.sess = sess
-	ic.initChecker()
+	ic.initChecker(sess)
 	ic.getInstances()
 	ic.scanInstances()
 }
