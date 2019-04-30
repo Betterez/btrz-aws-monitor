@@ -40,7 +40,7 @@ func getTags() []*btrzaws.AwsTag {
 }
 
 func (ic *InstanceChecker) getInstances() error {
-	reservations, err := btrzaws.GetInstancesWithTags(sess, tags)
+	reservations, err := btrzaws.GetInstancesWithTags(ic.sess, getTags())
 	if err != nil {
 		return err
 	} else {
