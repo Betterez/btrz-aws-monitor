@@ -36,11 +36,10 @@ type BetterezInstance struct {
 }
 
 const (
-	// ConnectionTimeout - waiting time in which healthchceck should be back
 	ConnectionTimeout = time.Duration(5 * time.Second)
+	StandradAPIPort   = 3000
 )
 
-// LoadFromAWSInstance - returns new BetterezInstance or an error
 func LoadFromAWSInstance(instance *ec2.Instance) *BetterezInstance {
 	result := &BetterezInstance{
 		Environment:     GetTagValue(instance, "Environment"),
@@ -77,13 +76,7 @@ func LoadFromAWSInstance(instance *ec2.Instance) *BetterezInstance {
 func (instance *BetterezInstance) GetHealthCheckString() string {
 	port := instance.HelthcheckPort
 	if instance.HelthcheckPort == 0 {
-		port = 3000
-		if instance.PathName == "webhooks" || instance.PathName == "liveseatmaps" || instance.PathName == "loyalty" {
-			port = 4000
-		}
-		if instance.Repository == "connex2" {
-			port = 22000
-		}
+		port = StandradAPIPort
 	}
 	var testURL string
 	var testIPAddress string
@@ -92,21 +85,35 @@ func (instance *BetterezInstance) GetHealthCheckString() string {
 	} else {
 		testIPAddress = instance.PrivateIPAddress
 	}
-	if instance.PathName == "webhooks" || instance.PathName == "liveseatmaps" ||
-		instance.PathName == "loyalty" ||
-		instance.PathName == "seatmaps" {
-		port = 4000
+	if isUsingElixir(instance.PathName) {
+		port = getElixrPort()
 	}
 	if instance.Repository == "connex2" {
-		port = 22000
+		port = getConnexPort()
 		testURL = fmt.Sprintf("http://%s:%d/healthcheck", testIPAddress, port)
 	} else if instance.PathName != "/" {
 		testURL = fmt.Sprintf("http://%s:%d/%s/healthcheck", testIPAddress, port, instance.PathName)
 	} else {
 		testURL = fmt.Sprintf("http://%s:%d/%s", testIPAddress, port, instance.HealthcheckPath)
 	}
-
 	return testURL
+}
+
+func getElixrPort() int {
+	return 4000
+}
+
+func getConnexPort() int {
+	return 22000
+}
+
+func isUsingElixir(pathName string) bool {
+	if pathName == "webhooks" || pathName == "liveseatmaps" ||
+		pathName == "loyalty" ||
+		pathName == "seatmaps" {
+		return true
+	}
+	return false
 }
 
 // CheckIsnstanceHealth - checks instance health
