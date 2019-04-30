@@ -54,29 +54,36 @@ func (ic *InstanceChecker) getInstances() error {
 	return err
 }
 
+func (ic *InstanceChecker) instanceCanSkipChecking(instance *btrzaws.BetterezInstance) bool {
+	if isThisInsataceStillStarting(instance.InstanceID, &ic.restartingInstances) {
+		logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = restarting  ", instance.InstanceID))
+		return true
+	}
+	if isThisInstanceJustCreated(instance) {
+		logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = new  ", instance.InstanceID))
+		return true
+	}
+	return false
+}
+
 func (ic *InstanceChecker) scanInstances() {
 	instancesIndex := 0
 	for _, instance := range ic.clientResponse.Instances {
 		instancesIndex++
-		if isThisInsataceStillStarting(instance.InstanceID, &ic.restartingInstances) {
-			logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = restarting  ", instance.InstanceID))
+		if ic.instanceCanSkipChecking(instance) {
 			continue
 		}
-		if isThisInstanceJustCreated(instance) {
-			logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = new  ", instance.InstanceID))
-			continue
-		}
-		isThisInstanceFaulty := false
+		instanceIsFaulty := false
 		ok, err := instance.CheckIsnstanceHealth()
 		if err != nil {
 			logging.RecordLogLine(fmt.Sprintf("warning: error %v while checking instance! Fault counted.", err))
-			isThisInstanceFaulty = true
+			instanceIsFaulty = true
 		} else {
 			if ok {
 				ic.handleWorkingInstance(instance)
 			}
 		}
-		if isThisInstanceFaulty {
+		if instanceIsFaulty {
 			ic.handleFaultyInstance(instance)
 		}
 	}
@@ -101,7 +108,7 @@ func (ic *InstanceChecker) handleWorkingInstance(instance *btrzaws.BetterezInsta
 	}
 }
 
-func (ic *InstanceChecker) increaseInstanceFault(instance *btrzaws.BetterezInstance) {
+func (ic *InstanceChecker) increaseInstanceFaultCount(instance *btrzaws.BetterezInstance) {
 	ic.faultyInstances[instance.InstanceID] = ic.faultyInstances[instance.InstanceID] + 1
 }
 
@@ -141,7 +148,7 @@ func (ic *InstanceChecker) restartInstance(instance *btrzaws.BetterezInstance) {
 }
 
 func (ic *InstanceChecker) handleFaultyInstance(instance *btrzaws.BetterezInstance) {
-	ic.increaseInstanceFault(instance)
+	ic.increaseInstanceFaultCount(instance)
 	ic.recordFailureWarning(instance)
 	if ic.faultyInstances[instance.InstanceID] > RestartThreshold {
 		logging.RecordLogLine(fmt.Sprintf("info: %d restarts out of %d before notifying", ic.restartedServicesCounterMap[instance.InstanceID].countingPoint, ReportingThreshold))
