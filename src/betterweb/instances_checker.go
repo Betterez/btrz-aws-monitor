@@ -9,16 +9,22 @@ import (
 	"time"
 )
 
-type InstanceChecker struct {
+type InstancesChecker struct {
 	faultyInstances             map[string]int
 	restartedServicesCounterMap map[string]restartCounter
 	restartingInstances         map[string]restartCounter
 	lastOKLogLine               time.Time
 	clientResponse              *ClientResponse
 	sess                        *session.Session
+	Configurations              InstancesCheckerConfiguration
 }
 
-func (ic *InstanceChecker) initChecker(sess *session.Session) {
+type InstancesCheckerConfiguration struct {
+	Environment    string
+	LoggingOptions []string
+}
+
+func (ic *InstancesChecker) initChecker(sess *session.Session) {
 	ic.sess = sess
 	ic.faultyInstances = make(map[string]int)
 	ic.restartedServicesCounterMap = make(map[string]restartCounter)
@@ -27,10 +33,10 @@ func (ic *InstanceChecker) initChecker(sess *session.Session) {
 	ic.clientResponse = &ClientResponse{Version: "1.0.0.4"}
 }
 
-func getTags() []*btrzaws.AwsTag {
+func (ic *InstancesChecker) getTags() []*btrzaws.AwsTag {
 	instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
 	tags := []*btrzaws.AwsTag{
-		btrzaws.NewWithValues("tag:Environment", "production"),
+		btrzaws.NewWithValues("tag:Environment", ic.Configurations.Environment),
 		btrzaws.NewWithValues("tag:Service-Type", "http"),
 		btrzaws.NewWithValues("tag:Online", "yes"),
 		btrzaws.NewWithValues("instance-state-name", "running"),
@@ -39,8 +45,8 @@ func getTags() []*btrzaws.AwsTag {
 	return tags
 }
 
-func (ic *InstanceChecker) getInstances() error {
-	reservations, err := btrzaws.GetInstancesWithTags(ic.sess, getTags())
+func (ic *InstancesChecker) getInstances() error {
+	reservations, err := btrzaws.GetInstancesWithTags(ic.sess, ic.getTags())
 	if err != nil {
 		return err
 	} else {
@@ -54,7 +60,7 @@ func (ic *InstanceChecker) getInstances() error {
 	return err
 }
 
-func (ic *InstanceChecker) instanceCanSkipChecking(instance *btrzaws.BetterezInstance) bool {
+func (ic *InstancesChecker) instanceCanSkipChecking(instance *btrzaws.BetterezInstance) bool {
 	if isThisInsataceStillStarting(instance.InstanceID, &ic.restartingInstances) {
 		logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = restarting  ", instance.InstanceID))
 		return true
@@ -66,7 +72,7 @@ func (ic *InstanceChecker) instanceCanSkipChecking(instance *btrzaws.BetterezIns
 	return false
 }
 
-func (ic *InstanceChecker) scanInstances() {
+func (ic *InstancesChecker) scanInstances() {
 	instancesIndex := 0
 	for _, instance := range ic.clientResponse.Instances {
 		instancesIndex++
@@ -89,53 +95,65 @@ func (ic *InstanceChecker) scanInstances() {
 	}
 }
 
-func (ic *InstanceChecker) handleWorkingInstance(instance *btrzaws.BetterezInstance) {
-	if ic.faultyInstances[instance.InstanceID] > 0 {
-		logging.RecordLogLine(fmt.Sprintf("info: Service %s on %s is back to normal.", instance.Repository, instance.InstanceID))
-	}
-	if ic.restartedServicesCounterMap[instance.InstanceID].countingPoint > 0 &&
-		ic.restartedServicesCounterMap[instance.InstanceID].restartCheckpoint.Before(time.Now()) {
-		logging.RecordLogLine(fmt.Sprintf("info: Clearing Service %s on %s notification counter.", instance.Repository, instance.InstanceID))
-		ic.restartedServicesCounterMap[instance.InstanceID] = restartCounter{
-			countingPoint:     0,
-			restartCheckpoint: time.Now(),
-		}
-	}
-	ic.faultyInstances[instance.InstanceID] = 0
+func (ic *InstancesChecker) wasInstanceFaulty(instance *btrzaws.BetterezInstance) bool {
+	return ic.faultyInstances[instance.InstanceID] > 0
+}
+
+func (ic *InstancesChecker) resetRestartCounterForInstance(instance *btrzaws.BetterezInstance) {
 	ic.restartingInstances[instance.InstanceID] = restartCounter{
 		countingPoint:     0,
 		restartCheckpoint: time.Now(),
 	}
 }
 
-func (ic *InstanceChecker) increaseInstanceFaultCount(instance *btrzaws.BetterezInstance) {
+func (ic *InstancesChecker) setInstanceAsHealthy(instance *btrzaws.BetterezInstance) {
+	ic.faultyInstances[instance.InstanceID] = 0
+}
+
+func (ic *InstancesChecker) handleWorkingInstance(instance *btrzaws.BetterezInstance) {
+	if ic.wasInstanceFaulty(instance) {
+		logging.RecordLogLine(fmt.Sprintf("info: Service %s on %s is back to normal.", instance.Repository, instance.InstanceID))
+	}
+	if ic.restartedServicesCounterMap[instance.InstanceID].countingPoint > 0 &&
+		ic.restartedServicesCounterMap[instance.InstanceID].restartCheckpoint.Before(time.Now()) {
+		logging.RecordLogLine(fmt.Sprintf("info: Clearing Service %s on %s notification counter.", instance.Repository, instance.InstanceID))
+		ic.resetRestartCounterForInstance(instance)
+	}
+	ic.setInstanceAsHealthy(instance)
+}
+
+func (ic *InstancesChecker) increaseInstanceFaultCount(instance *btrzaws.BetterezInstance) {
 	ic.faultyInstances[instance.InstanceID] = ic.faultyInstances[instance.InstanceID] + 1
 }
 
-func (ic *InstanceChecker) recordFailureWarning(instance *btrzaws.BetterezInstance) {
+func (ic *InstancesChecker) recordFailureWarning(instance *btrzaws.BetterezInstance) {
 	logging.RecordLogLine(fmt.Sprintf("warning: Instance %s (%s) failed healthcheck, %d failure count.",
 		instance.InstanceID, instance.Repository,
 		ic.faultyInstances[instance.InstanceID]))
 }
 
-func (ic *InstanceChecker) updateInstanceRestartCounter(instance *btrzaws.BetterezInstance) {
+func (ic *InstancesChecker) increaseInstanceRestartCounter(instance *btrzaws.BetterezInstance) {
 	ic.restartedServicesCounterMap[instance.InstanceID] = restartCounter{
 		countingPoint:     ic.restartedServicesCounterMap[instance.InstanceID].countingPoint + 1,
 		restartCheckpoint: time.Now().Add(time.Hour * 1),
 	}
 }
 
-func (ic *InstanceChecker) restartInstance(instance *btrzaws.BetterezInstance) {
+func (ic *InstancesChecker) setInstanceRestartCounter(instance *btrzaws.BetterezInstance) {
+	ic.restartingInstances[instance.InstanceID] = restartCounter{
+		countingPoint:     1,
+		restartCheckpoint: time.Now().Add(HardRestartDuration),
+	}
+}
+
+func (ic *InstancesChecker) restartInstance(instance *btrzaws.BetterezInstance) {
 	logging.RecordLogLine(fmt.Sprintf("fatal: server %s (%s) is out, restarting", instance.InstanceID, instance.Repository))
 	err := instance.RestartService()
 	if err != nil {
 		logging.RecordLogLine(fmt.Sprintf("fatal: error %v while restarting the service on %s (%s). Performing full restart!",
 			err, instance.InstanceID, instance.Repository))
 		instance.RestartServer()
-		ic.restartingInstances[instance.InstanceID] = restartCounter{
-			countingPoint:     1,
-			restartCheckpoint: time.Now().Add(HardRestartDuration),
-		}
+		ic.setInstanceRestartCounter(instance)
 	} else {
 		logging.RecordLogLine(fmt.Sprintf("info: service %s (on %s) restarted.",
 			instance.Repository,
@@ -147,7 +165,7 @@ func (ic *InstanceChecker) restartInstance(instance *btrzaws.BetterezInstance) {
 	}
 }
 
-func (ic *InstanceChecker) handleFaultyInstance(instance *btrzaws.BetterezInstance) {
+func (ic *InstancesChecker) handleFaultyInstance(instance *btrzaws.BetterezInstance) {
 	ic.increaseInstanceFaultCount(instance)
 	ic.recordFailureWarning(instance)
 	if ic.faultyInstances[instance.InstanceID] > RestartThreshold {
@@ -155,12 +173,12 @@ func (ic *InstanceChecker) handleFaultyInstance(instance *btrzaws.BetterezInstan
 		if ic.restartedServicesCounterMap[instance.InstanceID].countingPoint >= ReportingThreshold {
 			notifyInstaneFailureStatus(instance, ic.sess)
 		}
-		ic.updateInstanceRestartCounter(instance)
+		ic.increaseInstanceRestartCounter(instance)
 		ic.restartInstance(instance)
 	}
 }
 
-func (ic *InstanceChecker) CheckInstances(sess *session.Session) {
+func (ic *InstancesChecker) CheckInstances(sess *session.Session) {
 	ic.initChecker(sess)
 	ic.getInstances()
 	ic.scanInstances()
