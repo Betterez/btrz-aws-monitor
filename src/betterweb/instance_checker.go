@@ -101,39 +101,55 @@ func (ic *InstanceChecker) handleWorkingInstance(instance *btrzaws.BetterezInsta
 	}
 }
 
-func (ic *InstanceChecker) handleFaultyInstance(instance *btrzaws.BetterezInstance) {
+func (ic *InstanceChecker) increaseInstanceFault(instance *btrzaws.BetterezInstance) {
 	ic.faultyInstances[instance.InstanceID] = ic.faultyInstances[instance.InstanceID] + 1
+}
+
+func (ic *InstanceChecker) recordFailureWarning(instance *btrzaws.BetterezInstance) {
 	logging.RecordLogLine(fmt.Sprintf("warning: Instance %s (%s) failed healthcheck, %d failure count.",
 		instance.InstanceID, instance.Repository,
 		ic.faultyInstances[instance.InstanceID]))
+}
+
+func (ic *InstanceChecker) updateInstanceRestartCounter(instance *btrzaws.BetterezInstance) {
+	ic.restartedServicesCounterMap[instance.InstanceID] = restartCounter{
+		countingPoint:     ic.restartedServicesCounterMap[instance.InstanceID].countingPoint + 1,
+		restartCheckpoint: time.Now().Add(time.Hour * 1),
+	}
+}
+
+func (ic *InstanceChecker) restartInstance(instance *btrzaws.BetterezInstance) {
+	logging.RecordLogLine(fmt.Sprintf("fatal: server %s (%s) is out, restarting", instance.InstanceID, instance.Repository))
+	err := instance.RestartService()
+	if err != nil {
+		logging.RecordLogLine(fmt.Sprintf("fatal: error %v while restarting the service on %s (%s). Performing full restart!",
+			err, instance.InstanceID, instance.Repository))
+		instance.RestartServer()
+		ic.restartingInstances[instance.InstanceID] = restartCounter{
+			countingPoint:     1,
+			restartCheckpoint: time.Now().Add(HardRestartDuration),
+		}
+	} else {
+		logging.RecordLogLine(fmt.Sprintf("info: service %s (on %s) restarted.",
+			instance.Repository,
+			instance.InstanceID))
+		ic.restartingInstances[instance.InstanceID] = restartCounter{
+			countingPoint:     1,
+			restartCheckpoint: time.Now().Add(SoftRestartDuraion),
+		}
+	}
+}
+
+func (ic *InstanceChecker) handleFaultyInstance(instance *btrzaws.BetterezInstance) {
+	ic.increaseInstanceFault(instance)
+	ic.recordFailureWarning(instance)
 	if ic.faultyInstances[instance.InstanceID] > RestartThreshold {
 		logging.RecordLogLine(fmt.Sprintf("info: %d restarts out of %d before notifying", ic.restartedServicesCounterMap[instance.InstanceID].countingPoint, ReportingThreshold))
 		if ic.restartedServicesCounterMap[instance.InstanceID].countingPoint >= ReportingThreshold {
 			notifyInstaneFailureStatus(instance, ic.sess)
 		}
-		ic.restartedServicesCounterMap[instance.InstanceID] = restartCounter{
-			countingPoint:     ic.restartedServicesCounterMap[instance.InstanceID].countingPoint + 1,
-			restartCheckpoint: time.Now().Add(time.Hour * 1),
-		}
-		logging.RecordLogLine(fmt.Sprintf("fatal: server %s (%s) is out, restarting", instance.InstanceID, instance.Repository))
-		err := instance.RestartService()
-		if err != nil {
-			logging.RecordLogLine(fmt.Sprintf("fatal: error %v while restarting the service on %s (%s). Performing full restart!",
-				err, instance.InstanceID, instance.Repository))
-			instance.RestartServer()
-			ic.restartingInstances[instance.InstanceID] = restartCounter{
-				countingPoint:     1,
-				restartCheckpoint: time.Now().Add(HardRestartDuration),
-			}
-		} else {
-			logging.RecordLogLine(fmt.Sprintf("info: service %s (on %s) restarted.",
-				instance.Repository,
-				instance.InstanceID))
-			ic.restartingInstances[instance.InstanceID] = restartCounter{
-				countingPoint:     1,
-				restartCheckpoint: time.Now().Add(SoftRestartDuraion),
-			}
-		}
+		ic.updateInstanceRestartCounter(instance)
+		ic.restartInstance(instance)
 	}
 }
 
