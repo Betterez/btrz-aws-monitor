@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"logging"
-	"os"
 	"time"
 )
 
@@ -20,8 +19,8 @@ type InstancesChecker struct {
 }
 
 type InstancesCheckerConfiguration struct {
-	Environment    string
-	LoggingOptions []string
+	Environment          string
+	NotificationsOptions []string
 }
 
 func (ic *InstancesChecker) initChecker(sess *session.Session) {

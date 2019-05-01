@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"log"
 	"logging"
-	"os"
 	"time"
 )
 
