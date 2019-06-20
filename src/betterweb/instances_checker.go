@@ -59,7 +59,7 @@ func (ic *InstancesChecker) getInstances() error {
 	return err
 }
 
-func (ic *InstancesChecker) instanceCanSkipChecking(instance *btrzaws.BetterezInstance) bool {
+func (ic *InstancesChecker) instanceShouldSkipChecking(instance *btrzaws.BetterezInstance) bool {
 	if isThisInsataceStillStarting(instance.InstanceID, &ic.restartingInstances) {
 		logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = restarting  ", instance.InstanceID))
 		return true
@@ -75,11 +75,11 @@ func (ic *InstancesChecker) scanInstances() {
 	instancesIndex := 0
 	for _, instance := range ic.clientResponse.Instances {
 		instancesIndex++
-		if ic.instanceCanSkipChecking(instance) {
+		if ic.instanceShouldSkipChecking(instance) {
 			continue
 		}
 		instanceIsFaulty := false
-		ok, err := instance.CheckIsnstanceHealth()
+		ok, err := instance.CheckInstanceHealth()
 		if err != nil {
 			logging.RecordLogLine(fmt.Sprintf("warning: error %v while checking instance! Fault counted.", err))
 			instanceIsFaulty = true

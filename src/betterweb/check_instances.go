@@ -73,7 +73,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 				continue
 			}
 			isThisInstanceFaulty := false
-			ok, err := instance.CheckIsnstanceHealth()
+			ok, err := instance.CheckInstanceHealth()
 			if err != nil {
 				logging.RecordLogLine(fmt.Sprintf("warning: error %v while checking instance! Fault counted.", err))
 				isThisInstanceFaulty = true
