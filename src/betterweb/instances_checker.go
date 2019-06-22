@@ -3,9 +3,10 @@ package betterweb
 import (
 	"btrzaws"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"logging"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type InstancesChecker struct {
@@ -48,12 +49,11 @@ func (ic *InstancesChecker) getInstances() error {
 	reservations, err := btrzaws.GetInstancesWithTags(ic.sess, ic.getTags())
 	if err != nil {
 		return err
-	} else {
-		ic.clientResponse.Instances = ic.clientResponse.Instances[:0]
-		for idx := range reservations {
-			for _, instance := range reservations[idx].Instances {
-				ic.clientResponse.Instances = append(ic.clientResponse.Instances, btrzaws.LoadFromAWSInstance(instance))
-			}
+	}
+	ic.clientResponse.Instances = ic.clientResponse.Instances[:0]
+	for idx := range reservations {
+		for _, instance := range reservations[idx].Instances {
+			ic.clientResponse.Instances = append(ic.clientResponse.Instances, btrzaws.LoadFromAWSInstance(instance))
 		}
 	}
 	return err
