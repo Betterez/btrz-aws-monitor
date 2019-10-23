@@ -20,13 +20,13 @@ const (
 	// SoftRestartDuraion - Time to wait till a service restarted
 	SoftRestartDuraion = time.Second * 45
 	// HardRestartDuration - Time to wait after a hard restart was scheduled
-	HardRestartDuration = time.Second * 180
+	HardRestartDuration = time.Second * 600
 	// NotificationResetDuration - time to reset notification for service restarts
 	NotificationResetDuration = time.Hour * 1
 	// ServerAliveDurationNotification - info notificaiton
 	ServerAliveDurationNotification = time.Minute * 10
 	// InitializationDuration - how long it take for a server to boot up
-	InitializationDuration = HardRestartDuration / 2
+	InitializationDuration = HardRestartDuration
 )
 
 type restartCounter struct {
