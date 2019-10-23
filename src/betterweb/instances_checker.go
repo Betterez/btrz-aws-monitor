@@ -3,10 +3,10 @@ package betterweb
 import (
 	"btrzaws"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"logging"
-	"os"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type InstancesChecker struct {
@@ -80,7 +80,7 @@ func (ic *InstancesChecker) scanInstances() {
 			continue
 		}
 		instanceIsFaulty := false
-		ok, err := instance.CheckIsnstanceHealth()
+		ok, err := instance.CheckInstanceHealth()
 		if err != nil {
 			logging.RecordLogLine(fmt.Sprintf("warning: error %v while checking instance! Fault counted.", err))
 			instanceIsFaulty = true

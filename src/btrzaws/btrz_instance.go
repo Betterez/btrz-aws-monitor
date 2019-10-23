@@ -116,8 +116,8 @@ func isUsingElixir(pathName string) bool {
 	return false
 }
 
-// CheckIsnstanceHealth - checks instance health
-func (instance *BetterezInstance) CheckIsnstanceHealth() (bool, error) {
+// CheckInstanceHealth - checks instance health
+func (instance *BetterezInstance) CheckInstanceHealth() (bool, error) {
 	if instance == nil || instance.PrivateIPAddress == "" {
 		return true, nil
 	}

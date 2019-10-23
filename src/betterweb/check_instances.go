@@ -3,11 +3,11 @@ package betterweb
 import (
 	"btrzaws"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"log"
 	"logging"
-	"os"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 const (
@@ -74,7 +74,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 				continue
 			}
 			isThisInstanceFaulty := false
-			ok, err := instance.CheckIsnstanceHealth()
+			ok, err := instance.CheckInstanceHealth()
 			if err != nil {
 				logging.RecordLogLine(fmt.Sprintf("warning: error %v while checking instance! Fault counted.", err))
 				isThisInstanceFaulty = true
