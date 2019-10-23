@@ -31,13 +31,14 @@ type ClientResponse struct {
 
 // HealthCheckServer - server to healthcheck instances
 type HealthCheckServer struct {
-	serverMux     *http.ServeMux
-	serverPort    int
-	ServerVersion string
-	awsSession    *session.Session
-	serverStatus  string
-	usersTokens   map[string]int
-	authenticator betterauth.Authenticator
+	serverMux        *http.ServeMux
+	serverPort       int
+	ServerVersion    string
+	awsSession       *session.Session
+	serverStatus     string
+	usersTokens      map[string]int
+	authenticator    betterauth.Authenticator
+	instancesChecker *InstancesChecker
 }
 
 // CreateHealthCheckServer - create the server
@@ -82,8 +83,8 @@ func (server *HealthCheckServer) Start() error {
 	if server.awsSession == nil {
 		return errors.New("No aws session")
 	}
-	clientResponse := &ClientResponse{Instances: []*btrzaws.BetterezInstance{}, Version: "1.0.0.3"}
-	go checkInstances(server.awsSession, clientResponse)
+	server.instancesChecker = &InstancesChecker{}
+	server.instancesChecker.CheckInstances(server.awsSession)
 	server.serverMux = http.NewServeMux()
 	server.serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Server version", server.ServerVersion)
@@ -127,7 +128,7 @@ func (server *HealthCheckServer) Start() error {
 		}
 		encoder := json.NewEncoder(w)
 		w.Header().Set("Content-Type", "text/json")
-		encoder.Encode(clientResponse)
+		encoder.Encode(server.instancesChecker.clientResponse)
 	})
 	server.serverStatus = "running"
 	http.ListenAndServe(fmt.Sprintf(":%d", server.serverPort), server.serverMux)

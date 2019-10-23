@@ -20,8 +20,8 @@ type InstancesChecker struct {
 }
 
 type InstancesCheckerConfiguration struct {
-	Environment    string
-	LoggingOptions []string
+	Environment          string
+	NotificationsOptions []string
 }
 
 func (ic *InstancesChecker) initChecker(sess *session.Session) {
@@ -49,18 +49,17 @@ func (ic *InstancesChecker) getInstances() error {
 	reservations, err := btrzaws.GetInstancesWithTags(ic.sess, ic.getTags())
 	if err != nil {
 		return err
-	} else {
-		ic.clientResponse.Instances = ic.clientResponse.Instances[:0]
-		for idx := range reservations {
-			for _, instance := range reservations[idx].Instances {
-				ic.clientResponse.Instances = append(ic.clientResponse.Instances, btrzaws.LoadFromAWSInstance(instance))
-			}
+	}
+	ic.clientResponse.Instances = ic.clientResponse.Instances[:0]
+	for idx := range reservations {
+		for _, instance := range reservations[idx].Instances {
+			ic.clientResponse.Instances = append(ic.clientResponse.Instances, btrzaws.LoadFromAWSInstance(instance))
 		}
 	}
 	return err
 }
 
-func (ic *InstancesChecker) instanceCanSkipChecking(instance *btrzaws.BetterezInstance) bool {
+func (ic *InstancesChecker) instanceShouldSkipChecking(instance *btrzaws.BetterezInstance) bool {
 	if isThisInstanceStillStarting(instance.InstanceID, &ic.restartingInstances) {
 		logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = restarting  ", instance.InstanceID))
 		return true
@@ -76,7 +75,7 @@ func (ic *InstancesChecker) scanInstances() {
 	instancesIndex := 0
 	for _, instance := range ic.clientResponse.Instances {
 		instancesIndex++
-		if ic.instanceCanSkipChecking(instance) {
+		if ic.instanceShouldSkipChecking(instance) {
 			continue
 		}
 		instanceIsFaulty := false

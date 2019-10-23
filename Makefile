@@ -4,6 +4,8 @@ edit:
 	@export GOPATH=$$GOPATH:$$(pwd) && atom .
 edit2:
 	@export GOPATH=$$GOPATH:$$(pwd) && code .
+edit3:
+	@export GOPATH=$$GOPATH:$$(pwd) && /home/tal/programs/idea/bin/idea.sh .
 run: default
 	@bin/aws-utils
 	@echo ""
