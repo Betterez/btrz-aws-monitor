@@ -65,7 +65,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 		instancesIndex := 0
 		for _, instance := range clientResponse.Instances {
 			instancesIndex++
-			if isThisInsataceStillStarting(instance.InstanceID, &restartingInstances) {
+			if isThisInstanceStillStarting(instance.InstanceID, &restartingInstances) {
 				logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = restarting  ", instance.InstanceID))
 				continue
 			}
@@ -146,7 +146,7 @@ func notifyInstaneFailureStatus(faultyInstance *btrzaws.BetterezInstance, sess *
 	btrzaws.Notify(faultyInstance, sess)
 }
 
-func isThisInsataceStillStarting(instanceID string, listing *map[string]restartCounter) bool {
+func isThisInstanceStillStarting(instanceID string, listing *map[string]restartCounter) bool {
 	if (*listing)[instanceID].countingPoint != 0 {
 		if time.Now().Before((*listing)[instanceID].restartCheckpoint) {
 			return true

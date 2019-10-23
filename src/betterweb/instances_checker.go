@@ -61,7 +61,7 @@ func (ic *InstancesChecker) getInstances() error {
 }
 
 func (ic *InstancesChecker) instanceCanSkipChecking(instance *btrzaws.BetterezInstance) bool {
-	if isThisInsataceStillStarting(instance.InstanceID, &ic.restartingInstances) {
+	if isThisInstanceStillStarting(instance.InstanceID, &ic.restartingInstances) {
 		logging.RecordLogLine(fmt.Sprintf("  instanceId = %s  checked = false  reason = restarting  ", instance.InstanceID))
 		return true
 	}
