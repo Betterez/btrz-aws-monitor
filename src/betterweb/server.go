@@ -78,32 +78,26 @@ func (server *HealthCheckServer) insertUserWithLevel(level int) string {
 	return token
 }
 
-// Start -starts the server
-func (server *HealthCheckServer) Start() error {
-	if server.awsSession == nil {
-		return errors.New("No aws session")
-	}
-	server.instancesChecker = &InstancesChecker{}
-	server.instancesChecker.CheckInstances(server.awsSession)
-	server.serverMux = http.NewServeMux()
-	server.serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Server version", server.ServerVersion)
-		fmt.Fprint(w, "Working!")
-	})
+func (server *HealthCheckServer) handleHealthcheck() {
 	server.serverMux.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Server version", server.ServerVersion)
 		fmt.Fprint(w, "ok")
 	})
+}
 
+func (server *HealthCheckServer) handleAuthentication() {
+	fmt.Println("authentication req")
 	server.serverMux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error  - %v", err), http.StatusBadRequest)
+			fmt.Println("authentication failed on form")
 			return
 		}
 		userLevel, err := server.authenticator.GetUserLevel(r.FormValue("username"), r.FormValue("password"))
 		if err != nil {
 			http.Error(w, fmt.Sprintf("server error %v", err), http.StatusForbidden)
+			fmt.Println("authentication failed on db")
 			return
 		}
 		if userLevel == 0 {
@@ -115,7 +109,9 @@ func (server *HealthCheckServer) Start() error {
 		fmt.Fprintf(w, `{"user_level":%d,"auth_code":"%s","username":"%s","lang_code":"北京青年报记者昨"}`, userLevel, token, r.FormValue("username"))
 		return
 	})
+}
 
+func (server *HealthCheckServer) handleChecks() {
 	server.serverMux.HandleFunc("/check", func(w http.ResponseWriter, r *http.Request) {
 		userAuth, err := server.getUserCreds(r)
 		if err != nil {
@@ -130,9 +126,28 @@ func (server *HealthCheckServer) Start() error {
 		w.Header().Set("Content-Type", "text/json")
 		encoder.Encode(server.instancesChecker.clientResponse)
 	})
+}
+
+func (server *HealthCheckServer) handleDefaultPath() {
+	server.serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Server version", server.ServerVersion)
+		fmt.Fprint(w, "Working!")
+	})
+}
+
+func (server *HealthCheckServer) Start() error {
+	if server.awsSession == nil {
+		return errors.New("No aws session")
+	}
+	server.instancesChecker = &InstancesChecker{}
+	server.instancesChecker.CheckInstances(server.awsSession)
+	server.serverMux = http.NewServeMux()
+	server.handleDefaultPath()
+	server.handleHealthcheck()
+	server.handleAuthentication()
+	server.handleChecks()
 	server.serverStatus = "running"
-	http.ListenAndServe(fmt.Sprintf(":%d", server.serverPort), server.serverMux)
-	return nil
+	return http.ListenAndServe(fmt.Sprintf(":%d", server.serverPort), server.serverMux)
 }
 
 func (server *HealthCheckServer) getUserCreds(r *http.Request) (int, error) {

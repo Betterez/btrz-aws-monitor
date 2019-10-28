@@ -33,6 +33,14 @@ func (ic *InstancesChecker) initChecker(sess *session.Session) {
 	ic.clientResponse = &ClientResponse{Version: "1.0.0.4"}
 }
 
+func (ic *InstancesChecker) CheckInstances(sess *session.Session) {
+	ic.initChecker(sess)
+	go func() {
+		ic.getInstances()
+		ic.scanInstances()
+	}()
+}
+
 func (ic *InstancesChecker) getTags() []*btrzaws.AwsTag {
 	instanceTag := &btrzaws.AwsTag{TagName: "tag:Nginx-Configuration", TagValues: []string{"api", "app", "connex"}}
 	tags := []*btrzaws.AwsTag{
@@ -175,10 +183,4 @@ func (ic *InstancesChecker) handleFaultyInstance(instance *btrzaws.BetterezInsta
 		ic.increaseInstanceRestartCounter(instance)
 		ic.restartInstance(instance)
 	}
-}
-
-func (ic *InstancesChecker) CheckInstances(sess *session.Session) {
-	ic.initChecker(sess)
-	ic.getInstances()
-	ic.scanInstances()
 }
