@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/mxk/go-sqlite/sqlite3"
 )
@@ -20,17 +21,22 @@ func (auth *SQLiteAuthenticator) GetUserLevel(username, password string) (int, e
 	if !auth.isOpen {
 		return 0, errors.New("Database connection is closed")
 	}
-	query := "select * from users where username=$a and password=$b"
+	query := "select user_rank from users where username=$a and password_hash=$b"
 	arguments := sqlite3.NamedArgs{"$a": username, "$b": fmt.Sprintf("%x", sha256.Sum256([]byte(password)))}
 	row := make(sqlite3.RowMap)
 	stt, err := auth.sqliteConnection.Query(query, arguments)
 	if err != nil {
+		log.Println(err, "can't get info")
 		return 0, err
 	}
 	defer stt.Close()
 	stt.Scan(row)
-	userRank, _ := row["rank"].(int64)
-	return int(userRank), nil
+	if len(row) > 0 {
+		userRank, _ := row["user_rank"].(int64)
+		fmt.Println(userRank, arguments)
+		return int(userRank), nil
+	}
+	return 0, nil
 }
 
 // GetSQLiteAuthenticator - return authenticator

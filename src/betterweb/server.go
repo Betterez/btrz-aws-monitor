@@ -49,7 +49,7 @@ func CreateHealthCheckServer() (*HealthCheckServer, error) {
 		serverStatus:  "Idle",
 		usersTokens:   make(map[string]int),
 	}
-	authenticator, err := betterauth.GetSQLiteAuthenticator("secrets/users.db")
+	authenticator, err := betterauth.GetSQLiteAuthenticator("secrets/users.sqlite")
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (server *HealthCheckServer) handleAuthentication() {
 		userLevel, err := server.authenticator.GetUserLevel(r.FormValue("username"), r.FormValue("password"))
 		if err != nil {
 			http.Error(w, fmt.Sprintf("server error %v", err), http.StatusForbidden)
-			fmt.Println("authentication failed on db")
+			fmt.Println("authentication failed on db", r.FormValue("username"), r.FormValue("password"))
 			return
 		}
 		if userLevel == 0 {
