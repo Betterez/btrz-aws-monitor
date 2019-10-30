@@ -3,7 +3,9 @@ package betterweb
 import (
 	"btrzaws"
 	"fmt"
+	"log"
 	"logging"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -17,6 +19,7 @@ type InstancesChecker struct {
 	clientResponse              *ClientResponse
 	sess                        *session.Session
 	Configurations              InstancesCheckerConfiguration
+	tempCheckedInstances        []*btrzaws.BetterezInstance
 }
 
 type InstancesCheckerConfiguration struct {
@@ -31,14 +34,29 @@ func (ic *InstancesChecker) initChecker(sess *session.Session) {
 	ic.restartingInstances = make(map[string]restartCounter)
 	ic.lastOKLogLine = time.Now().Add(ServerAliveDurationNotification)
 	ic.clientResponse = &ClientResponse{Version: "1.0.0.4"}
+	ic.Configurations.Environment = os.Getenv("env")
+	if ic.Configurations.Environment == "" {
+		ic.Configurations.Environment = "production"
+	}
 }
 
 func (ic *InstancesChecker) CheckInstances(sess *session.Session) {
 	ic.initChecker(sess)
 	go func() {
-		ic.getInstances()
-		ic.scanInstances()
+		for {
+			err := ic.getInstances()
+			if err != nil {
+				log.Fatalln(err, "getting instances")
+			}
+			ic.scanInstances()
+			ic.copyTempInstancesToClient()
+		}
 	}()
+}
+
+func (ic *InstancesChecker) copyTempInstancesToClient() {
+	log.Println("copied")
+	ic.clientResponse.Instances = ic.tempCheckedInstances
 }
 
 func (ic *InstancesChecker) getTags() []*btrzaws.AwsTag {
@@ -58,10 +76,10 @@ func (ic *InstancesChecker) getInstances() error {
 	if err != nil {
 		return err
 	}
-	ic.clientResponse.Instances = ic.clientResponse.Instances[:0]
+	ic.tempCheckedInstances = ic.tempCheckedInstances[:0]
 	for idx := range reservations {
 		for _, instance := range reservations[idx].Instances {
-			ic.clientResponse.Instances = append(ic.clientResponse.Instances, btrzaws.LoadFromAWSInstance(instance))
+			ic.tempCheckedInstances = append(ic.tempCheckedInstances, btrzaws.LoadFromAWSInstance(instance))
 		}
 	}
 	return err
@@ -81,7 +99,7 @@ func (ic *InstancesChecker) instanceShouldSkipChecking(instance *btrzaws.Bettere
 
 func (ic *InstancesChecker) scanInstances() {
 	instancesIndex := 0
-	for _, instance := range ic.clientResponse.Instances {
+	for _, instance := range ic.tempCheckedInstances {
 		instancesIndex++
 		if ic.instanceShouldSkipChecking(instance) {
 			continue

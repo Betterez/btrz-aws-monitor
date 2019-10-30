@@ -86,7 +86,6 @@ func (server *HealthCheckServer) handleHealthcheck() {
 }
 
 func (server *HealthCheckServer) handleAuthentication() {
-	fmt.Println("authentication req")
 	server.serverMux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {

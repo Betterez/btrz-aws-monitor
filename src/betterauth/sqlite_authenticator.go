@@ -9,14 +9,12 @@ import (
 	"github.com/mxk/go-sqlite/sqlite3"
 )
 
-// SQLiteAuthenticator - simple sqlite authenticator
 type SQLiteAuthenticator struct {
 	fileName         string
 	sqliteConnection *sqlite3.Conn
 	isOpen           bool
 }
 
-// GetUserLevel -gets user level
 func (auth *SQLiteAuthenticator) GetUserLevel(username, password string) (int, error) {
 	if !auth.isOpen {
 		return 0, errors.New("Database connection is closed")
@@ -33,13 +31,11 @@ func (auth *SQLiteAuthenticator) GetUserLevel(username, password string) (int, e
 	stt.Scan(row)
 	if len(row) > 0 {
 		userRank, _ := row["user_rank"].(int64)
-		fmt.Println(userRank, arguments)
 		return int(userRank), nil
 	}
 	return 0, nil
 }
 
-// GetSQLiteAuthenticator - return authenticator
 func GetSQLiteAuthenticator(fileName string) (*SQLiteAuthenticator, error) {
 	result := &SQLiteAuthenticator{fileName: fileName, isOpen: false}
 	var err error
