@@ -45,7 +45,7 @@ type HealthCheckServer struct {
 func CreateHealthCheckServer() (*HealthCheckServer, error) {
 	result := &HealthCheckServer{
 		serverPort:    3000,
-		ServerVersion: "0.0.0.2",
+		ServerVersion: "0.0.0.7",
 		serverStatus:  "Idle",
 		usersTokens:   make(map[string]int),
 	}
@@ -78,7 +78,7 @@ func (server *HealthCheckServer) insertUserWithLevel(level int) string {
 func (server *HealthCheckServer) handleHealthcheck() {
 	server.serverMux.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Server version", server.ServerVersion)
-		fmt.Fprint(w, "ok")
+		fmt.Fprint(w, "server version "+server.ServerVersion)
 	})
 }
 
