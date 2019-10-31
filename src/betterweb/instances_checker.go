@@ -43,21 +43,27 @@ func (ic *InstancesChecker) initChecker(sess *session.Session) {
 func (ic *InstancesChecker) CheckInstances(sess *session.Session) {
 	ic.initChecker(sess)
 	go func() {
+		updateTime := time.Now()
 		for {
 			err := ic.getInstances()
 			if err != nil {
 				log.Fatalln(err, "getting instances")
 			}
 			ic.scanInstances()
+			for !time.Now().After(updateTime.Add(time.Second * 9)) {
+				time.Sleep(time.Second)
+			}
+			updateTime = time.Now()
 			ic.updateResponseInstances()
 		}
 	}()
 }
 
 func (ic *InstancesChecker) updateResponseInstances() {
-	// for _, instance := range ic.tempCheckedInstances {
-	// }
-	// ic.clientResponse.Instances = ic.tempCheckedInstances
+	ic.clientResponse.Instances = ic.clientResponse.Instances[:0]
+	for _, instance := range ic.tempCheckedInstances {
+		ic.clientResponse.Instances = append(ic.clientResponse.Instances, instance)
+	}
 }
 
 func (ic *InstancesChecker) getTags() []*btrzaws.AwsTag {
