@@ -16,9 +16,8 @@ const (
 	// RestartThreshold - how many failed attempts befor reset
 	RestartThreshold = 3
 	// TestDuration - time to wait between testing
-	TestDuration = 8 * time.Second
-	// SoftRestartDuraion - Time to wait till a service restarted
-	SoftRestartDuraion = time.Second * 45
+	TestDuration        = 8 * time.Second
+	SoftRestartDuration = time.Second * 45
 	// HardRestartDuration - Time to wait after a hard restart was scheduled
 	HardRestartDuration = time.Second * 600
 	// NotificationResetDuration - time to reset notification for service restarts
@@ -130,7 +129,7 @@ func checkInstances(sess *session.Session, clientResponse *ClientResponse) {
 							instance.InstanceID))
 						restartingInstances[instance.InstanceID] = restartCounter{
 							countingPoint:     1,
-							restartCheckpoint: time.Now().Add(SoftRestartDuraion),
+							restartCheckpoint: time.Now().Add(SoftRestartDuration),
 						}
 					}
 				}
@@ -155,7 +154,6 @@ func isThisInstanceStillStarting(instanceID string, listing *map[string]restartC
 	return false
 }
 
-// mostly done for as
 func isThisInstanceJustCreated(instance *btrzaws.BetterezInstance) bool {
 	if (instance.AwsInstance.LaunchTime.Add(InitializationDuration)).After(time.Now()) {
 		return true

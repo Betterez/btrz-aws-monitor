@@ -72,7 +72,22 @@ func LoadFromAWSInstance(instance *ec2.Instance) *BetterezInstance {
 	return result
 }
 
-// GetHealthCheckString - Creates the healthcheck string based on the service name and address
+func (instance *BetterezInstance) IsSameInstanceAs(compInstance *BetterezInstance) bool {
+	if instance.BuildNumber != compInstance.BuildNumber {
+		return false
+	}
+	if instance.Repository != compInstance.Repository {
+		return false
+	}
+	if instance.PrivateIPAddress != compInstance.PrivateIPAddress {
+		return false
+	}
+	if instance.InstanceID != compInstance.InstanceID {
+		return false
+	}
+	return true
+}
+
 func (instance *BetterezInstance) GetHealthCheckString() string {
 	port := instance.HelthcheckPort
 	if instance.HelthcheckPort == 0 {

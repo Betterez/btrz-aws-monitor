@@ -49,14 +49,15 @@ func (ic *InstancesChecker) CheckInstances(sess *session.Session) {
 				log.Fatalln(err, "getting instances")
 			}
 			ic.scanInstances()
-			ic.copyTempInstancesToClient()
+			ic.updateResponseInstances()
 		}
 	}()
 }
 
-func (ic *InstancesChecker) copyTempInstancesToClient() {
-	log.Println("copied")
-	ic.clientResponse.Instances = ic.tempCheckedInstances
+func (ic *InstancesChecker) updateResponseInstances() {
+	// for _, instance := range ic.tempCheckedInstances {
+	// }
+	// ic.clientResponse.Instances = ic.tempCheckedInstances
 }
 
 func (ic *InstancesChecker) getTags() []*btrzaws.AwsTag {
@@ -185,7 +186,7 @@ func (ic *InstancesChecker) restartInstance(instance *btrzaws.BetterezInstance) 
 			instance.InstanceID))
 		ic.restartingInstances[instance.InstanceID] = restartCounter{
 			countingPoint:     1,
-			restartCheckpoint: time.Now().Add(SoftRestartDuraion),
+			restartCheckpoint: time.Now().Add(SoftRestartDuration),
 		}
 	}
 }
