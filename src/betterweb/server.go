@@ -57,17 +57,14 @@ func CreateHealthCheckServer() (*HealthCheckServer, error) {
 	return result, nil
 }
 
-// GetServerStatus - get current status
 func (server *HealthCheckServer) GetServerStatus(awsSession *session.Session) string {
 	return server.serverStatus
 }
 
-// SetSession - sets the aws session
 func (server *HealthCheckServer) SetSession(awsSession *session.Session) {
 	server.awsSession = awsSession
 }
 
-// SetListeningPort - Set the Listening Port
 func (server *HealthCheckServer) SetListeningPort(port int) {
 	server.serverPort = port
 }
