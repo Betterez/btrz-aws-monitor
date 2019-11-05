@@ -14,7 +14,7 @@ const (
 	RestartThreshold                = 3
 	TestDuration                    = 8 * time.Second
 	SoftRestartDuration             = time.Second * 45
-	HardRestartDuration             = time.Second * 600
+	HardRestartDuration             = time.Minute * 7
 	NotificationResetDuration       = time.Hour * 1
 	ServerAliveDurationNotification = time.Minute * 10
 	InitializationDuration          = HardRestartDuration
