@@ -182,6 +182,10 @@ func (ic *InstancesChecker) restartInstance(instance *btrzaws.BetterezInstance) 
 	logging.RecordLogLine(fmt.Sprintf("fatal: server %s (%s) is out, restarting", instance.InstanceID, instance.Repository))
 	err := instance.RestartService()
 	if err != nil {
+		if instance.ShouldTerminateOnFault() {
+			instance.TerminateInstance()
+			return
+		}
 		logging.RecordLogLine(fmt.Sprintf("fatal: error %v while restarting the service on %s (%s). Performing full restart!",
 			err, instance.InstanceID, instance.Repository))
 		instance.RestartServer()

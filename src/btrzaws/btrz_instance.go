@@ -28,6 +28,7 @@ type BetterezInstance struct {
 	PathName               string
 	ServiceStatus          string
 	ServiceStatusErrorCode string
+	TerminateOnFault       string
 	FaultsCount            int
 	StatusCheck            time.Time
 	AwsInstance            *ec2.Instance
@@ -42,14 +43,15 @@ const (
 
 func LoadFromAWSInstance(instance *ec2.Instance) *BetterezInstance {
 	result := &BetterezInstance{
-		Environment:     GetTagValue(instance, "Environment"),
-		Repository:      GetTagValue(instance, "Repository"),
-		PathName:        GetTagValue(instance, "Path-Name"),
-		InstanceName:    GetTagValue(instance, "Name"),
-		HealthcheckPath: GetTagValue(instance, "Healtcheck-Path"),
-		InstanceID:      *instance.InstanceId,
-		KeyName:         *instance.KeyName,
-		AwsInstance:     instance,
+		Environment:      GetTagValue(instance, "Environment"),
+		Repository:       GetTagValue(instance, "Repository"),
+		PathName:         GetTagValue(instance, "Path-Name"),
+		InstanceName:     GetTagValue(instance, "Name"),
+		HealthcheckPath:  GetTagValue(instance, "Healtcheck-Path"),
+		TerminateOnFault: GetTagValue(instance, "Terminate on fault"),
+		InstanceID:       *instance.InstanceId,
+		KeyName:          *instance.KeyName,
+		AwsInstance:      instance,
 	}
 	if instance.PublicIpAddress != nil {
 		result.PublicIPAddress = *instance.PublicIpAddress
@@ -70,6 +72,13 @@ func LoadFromAWSInstance(instance *ec2.Instance) *BetterezInstance {
 		result.HelthcheckPort = 0
 	}
 	return result
+}
+
+func (instance *BetterezInstance) ShouldTerminateOnFault() bool {
+	if instance.TerminateOnFault == "yes" {
+		return true
+	}
+	return false
 }
 
 func (instance *BetterezInstance) IsSameInstanceAs(compInstance *BetterezInstance) bool {
@@ -174,7 +183,24 @@ func GetKeysPath() string {
 	return location
 }
 
-// RestartService - restart the service pointed by the tag
+func (instance *BetterezInstance) TerminateInstance() error {
+	sess, err := GetAWSSession()
+	if err != nil {
+		return err
+	}
+	ec2Service := ec2.New(sess)
+	_, err = ec2Service.TerminateInstances(
+		&ec2.TerminateInstancesInput{
+			DryRun: aws.Bool(false),
+			InstanceIds: []*string{
+				aws.String(instance.InstanceID),
+			},
+		},
+	)
+
+	return err
+}
+
 func (instance *BetterezInstance) RestartService() error {
 	serviceName := instance.GetTagValue("Repository")
 	if serviceName == "" {
@@ -183,7 +209,7 @@ func (instance *BetterezInstance) RestartService() error {
 	if GetKeysPath() == "" {
 		return errors.New("no keys path")
 	}
-	//os.path
+
 	keyFileLocation := fmt.Sprintf("%s%s.pem", GetKeysPath(), instance.KeyName)
 	if _, err := os.Stat(keyFileLocation); os.IsNotExist(err) {
 		return fmt.Errorf("%s key file doesn't exist", keyFileLocation)
@@ -196,7 +222,6 @@ func (instance *BetterezInstance) RestartService() error {
 	return err
 }
 
-// RestartServer - stop and start the aws vm in case it doesn't responde
 func (instance *BetterezInstance) RestartServer() error {
 	session, err := GetAWSSession()
 	if err != nil {
