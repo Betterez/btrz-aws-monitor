@@ -183,6 +183,7 @@ func (ic *InstancesChecker) restartInstance(instance *btrzaws.BetterezInstance) 
 	err := instance.RestartService()
 	if err != nil {
 		if instance.ShouldTerminateOnFault() {
+			logging.RecordLogLine("Server %s is marked for termination. Terminating")
 			instance.TerminateInstance()
 			return
 		}
