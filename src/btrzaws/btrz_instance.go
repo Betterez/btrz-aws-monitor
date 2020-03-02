@@ -34,6 +34,7 @@ type BetterezInstance struct {
 	AwsInstance            *ec2.Instance
 	HealthcheckPath        string
 	HelthcheckPort         int
+	AutoScalingGroupName   string
 }
 
 const (
@@ -43,16 +44,18 @@ const (
 
 func LoadFromAWSInstance(instance *ec2.Instance) *BetterezInstance {
 	result := &BetterezInstance{
-		Environment:      GetTagValue(instance, "Environment"),
-		Repository:       GetTagValue(instance, "Repository"),
-		PathName:         GetTagValue(instance, "Path-Name"),
-		InstanceName:     GetTagValue(instance, "Name"),
-		HealthcheckPath:  GetTagValue(instance, "Healtcheck-Path"),
-		TerminateOnFault: GetTagValue(instance, "Terminate on fault"),
-		InstanceID:       *instance.InstanceId,
-		KeyName:          *instance.KeyName,
-		AwsInstance:      instance,
+		Environment:          GetTagValue(instance, "Environment"),
+		Repository:           GetTagValue(instance, "Repository"),
+		PathName:             GetTagValue(instance, "Path-Name"),
+		InstanceName:         GetTagValue(instance, "Name"),
+		HealthcheckPath:      GetTagValue(instance, "Healtcheck-Path"),
+		TerminateOnFault:     GetTagValue(instance, "Terminate on fault"),
+		AutoScalingGroupName: GetTagValue(instance, "aws:autoscaling:groupName"),
+		InstanceID:           *instance.InstanceId,
+		KeyName:              *instance.KeyName,
+		AwsInstance:          instance,
 	}
+
 	if instance.PublicIpAddress != nil {
 		result.PublicIPAddress = *instance.PublicIpAddress
 	}
@@ -74,6 +77,9 @@ func LoadFromAWSInstance(instance *ec2.Instance) *BetterezInstance {
 	return result
 }
 
+func (instance *BetterezInstance) IsInstanceOnAutoScalingGroup() bool {
+	return instance.AutoScalingGroupName != ""
+}
 func (instance *BetterezInstance) ShouldTerminateOnFault() bool {
 	if instance.TerminateOnFault == "yes" {
 		return true
