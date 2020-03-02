@@ -45,7 +45,7 @@ type HealthCheckServer struct {
 func CreateHealthCheckServer() (*HealthCheckServer, error) {
 	result := &HealthCheckServer{
 		serverPort:    3000,
-		ServerVersion: "0.0.0.7",
+		ServerVersion: "0.5.0.1",
 		serverStatus:  "Idle",
 		usersTokens:   make(map[string]int),
 	}
