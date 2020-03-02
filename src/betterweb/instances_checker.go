@@ -206,9 +206,15 @@ func (ic *InstancesChecker) handleFaultyInstance(instance *btrzaws.BetterezInsta
 	ic.increaseInstanceFaultCount(instance)
 	ic.recordFailureWarning(instance)
 	if ic.faultyInstances[instance.InstanceID] > RestartThreshold {
-		logging.RecordLogLine(fmt.Sprintf("info: %d restarts out of %d before notifying", ic.restartedServicesCounterMap[instance.InstanceID].countingPoint, ReportingThreshold))
+		logging.RecordLogLine(fmt.Sprintf("info: %d restarts out of %d before notifying",
+			ic.restartedServicesCounterMap[instance.InstanceID].countingPoint, ReportingThreshold))
 		if ic.restartedServicesCounterMap[instance.InstanceID].countingPoint >= ReportingThreshold {
-			notifyInstaneFailureStatus(instance, ic.sess)
+			if instance.IsInstanceOnAutoScalingGroup() {
+				logging.RecordLogLine(fmt.Sprintf("Terminating %s. it's on a scaling group. no notification will be sent", instance.InstanceID))
+				instance.TerminateInstance()
+			} else {
+				notifyInstaneFailureStatus(instance, ic.sess)
+			}
 		}
 		ic.increaseInstanceRestartCounter(instance)
 		ic.restartInstance(instance)
